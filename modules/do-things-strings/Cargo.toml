@@ -1,0 +1,15 @@
+[package]
+name = "do-things-strings"
+version = "0.1.0"
+authors = ["Eike Siewertsen <eike@technocreatives.com>"]
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+capnp = "0.10.0"
+divvun-schema = { path = "../../divvun-schema" }
+
+[build-dependencies]
+capnpc = "0.10.0"

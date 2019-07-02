@@ -1,0 +1,1 @@
+cargo build && cp target/debug/libreverse_string.dylib modules/reverse_string.dylib && RUST_LOG=divvun_pipeline=info cargo test -- --test-threads 1 --nocapture
