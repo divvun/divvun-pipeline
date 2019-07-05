@@ -14,3 +14,8 @@ env_logger = "0.6.2"
 capnp = "0.10.0"
 divvun-schema = { path = "../divvun-schema" }
 tempfile = "3.1.0"
+futures-preview = { version = "=0.3.0-alpha.17", features = ["async-await", "nightly"] }
+runtime = "=0.3.0-alpha.6"
+serde = { version = "=1.0.91", features = ["derive", "rc"] }
+serde_json = "=1.0.40"
+hashbrown = "=0.5.0"

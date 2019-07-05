@@ -1,7 +1,10 @@
+#![feature(async_await)]
+
 use std::sync::Arc;
 
 pub mod module;
 pub mod pipeline;
+mod wip_pipeline;
 
 use module::*;
 use pipeline::*;
