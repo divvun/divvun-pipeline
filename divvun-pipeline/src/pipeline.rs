@@ -153,6 +153,7 @@ mod tests {
         println!("Hello, world!");
     }
 
+    #[ignore]
     #[runtime::test]
     async fn pipeline_run() {
         let json_nodes = json!([

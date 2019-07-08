@@ -64,12 +64,19 @@ impl ModuleRegistry {
     /// If found, initializes the module and returns it. Alternatively returns a list of
     /// errors for each attempted load (if there are multiple search paths).
     pub fn get_module(&self, module_name: &str) -> Result<Module, Box<dyn Error>> {
+        let ext = if cfg!(target_os = "mac") {
+            "dylib"
+        } else if cfg!(target_os = "windows") {
+            "dll"
+        } else {
+            "so"
+        };
+
         // TODO: actually store in registry
-        // TODO: use.. correct dynamic library extension for other OS'
         let load_paths = self
             .search_paths
             .iter()
-            .map(|path| path.join(format!("{}.dylib", module_name)));
+            .map(|path| path.join(format!("{}.{}", module_name, ext)));
 
         let mut errors = Vec::new();
         for path in load_paths {
