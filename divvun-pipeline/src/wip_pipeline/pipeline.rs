@@ -36,7 +36,7 @@ type PipelineType = Arc<Vec<Arc<String>>>;
 
 impl Pipeline {
     pub async fn run(&self, registry: Arc<ModuleRegistry>, input: PipelineType) -> PipelineType {
-        self.root.run(registry, input).shared().await
+        self.root.run(registry, input).await
     }
 
     pub fn load_modules(&self) -> Arc<ModuleRegistry> {
@@ -75,7 +75,7 @@ impl PipelineNodeSerial {
                 let mut input = input.clone();
 
                 for node in nodes {
-                    input = node.run(Arc::clone(&registry), input).shared().await;
+                    input = node.run(Arc::clone(&registry), input).await;
                 }
 
                 input
@@ -118,7 +118,7 @@ impl PipelineNodeParallel {
                     vector.push(node.run(Arc::clone(&registry), new_input.clone()));
                 }
 
-                let future_results = join_all(vector).shared().await;
+                let future_results = join_all(vector).await;
 
                 let results = future_results
                     .into_iter()

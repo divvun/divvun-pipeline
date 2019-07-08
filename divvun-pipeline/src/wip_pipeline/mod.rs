@@ -34,7 +34,6 @@ async fn pipeline_test() {
             Arc::clone(&registry),
             Arc::new(vec![Arc::new("initial string".to_owned())]),
         )
-        .shared()
         .await;
 
     println!("{:?}", result);
