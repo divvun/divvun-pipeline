@@ -1,4 +1,3 @@
-mod module;
 mod pipeline;
 
 use std::sync::Arc;
@@ -7,6 +6,7 @@ use futures::future::FutureExt;
 use serde_json::json;
 
 use pipeline::Pipeline;
+use super::module::{Module, ModuleRegistry};
 
 #[runtime::test]
 async fn pipeline_test() {
@@ -27,7 +27,8 @@ async fn pipeline_test() {
         root: serde_json::from_str(&json_str).unwrap(),
     };
 
-    let registry = pipeline.load_modules();
+    let allocator = Arc::new(ModuleAllocator::new(AllocationType::Memory));
+    let registry = Arc::new(ModuleRegistry::new(allocator).unwrap());
 
     let result = pipeline
         .run(

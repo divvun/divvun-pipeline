@@ -5,7 +5,7 @@ use futures::future::{join_all, FutureExt};
 use hashbrown::HashMap;
 use serde::{Deserialize, Serialize};
 
-use super::module::{Module, ModuleRegistry};
+use super::super::module::{Module, ModuleRegistry};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Pipeline {
@@ -38,38 +38,13 @@ impl Pipeline {
     pub async fn run(&self, registry: Arc<ModuleRegistry>, input: PipelineType) -> PipelineType {
         self.root.run(registry, input).await
     }
-
-    pub fn load_modules(&self) -> Arc<ModuleRegistry> {
-        let mut module_registry = ModuleRegistry {
-            registry: HashMap::new(),
-        };
-
-        let modules = self.root.module_names();
-
-        for module in modules {
-            module_registry.registry.insert(
-                module.to_owned(),
-                Module {
-                    name: module.to_owned(),
-                    output: format!("{} output", module),
-                },
-            );
-        }
-
-        Arc::new(module_registry)
-    }
 }
 
 impl PipelineNodeSerial {
     async fn run(&self, registry: Arc<ModuleRegistry>, input: PipelineType) -> PipelineType {
         match self {
             PipelineNodeSerial::SerialSingle(command) => {
-                let module = registry.registry.get(&command.module).unwrap();
-
-                Arc::new(vec![Arc::new(format!(
-                    "|{} {} ran on input:{:?}\n|",
-                    module.name, command.command, input
-                ))])
+                process_single(command, input)
             }
             PipelineNodeSerial::SerialMultiple(nodes) => {
                 let mut input = input.clone();
@@ -82,33 +57,13 @@ impl PipelineNodeSerial {
             }
         }
     }
-
-    pub fn module_names(&self) -> HashSet<String> {
-        match self {
-            PipelineNodeSerial::SerialSingle(command) => {
-                let mut names = HashSet::new();
-                names.insert(command.module.to_string());
-                names
-            }
-            PipelineNodeSerial::SerialMultiple(nodes) => nodes
-                .iter()
-                .map(|node| node.module_names())
-                .flatten()
-                .collect(),
-        }
-    }
 }
 
 impl PipelineNodeParallel {
     async fn run(&self, registry: Arc<ModuleRegistry>, input: PipelineType) -> PipelineType {
         match self {
             PipelineNodeParallel::ParallelSingle(command) => {
-                let module = registry.registry.get(&command.module).unwrap();
-
-                Arc::new(vec![Arc::new(format!(
-                    "|{} {} ran on input:{:?}\n|",
-                    module.name, command.command, input
-                ))])
+                process_single(command, input)
             }
             PipelineNodeParallel::ParallelMultiple(nodes) => {
                 let new_input = input.clone();
@@ -139,19 +94,13 @@ impl PipelineNodeParallel {
             }
         }
     }
+}
 
-    pub fn module_names(&self) -> HashSet<String> {
-        match self {
-            PipelineNodeParallel::ParallelSingle(command) => {
-                let mut names = HashSet::new();
-                names.insert(command.module.to_string());
-                names
-            }
-            PipelineNodeParallel::ParallelMultiple(nodes) => nodes
-                .iter()
-                .map(|node| node.module_names())
-                .flatten()
-                .collect(),
-        }
-    }
+fn process_single(command: &PipelineCommand, input: PipelineType) -> PipelineType {
+    //let module = registry.get_module(&command.module).unwrap();
+
+    Arc::new(vec![Arc::new(format!(
+        "|{} ran on input:{:?}\n|",
+        &command.module, input
+    ))])
 }
