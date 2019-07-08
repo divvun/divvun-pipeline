@@ -2,7 +2,8 @@
 
 struct ModuleMetadata {
     moduleName @0 :Text;
-    commands @1 :List(ModuleCommandMetadata);
+    moduleVersion @1 :Text;
+    commands @2 :List(ModuleCommandMetadata);
 }
 
 struct ModuleCommandMetadata {

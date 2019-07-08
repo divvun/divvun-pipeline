@@ -12,6 +12,7 @@ use std::path::Path;
 use std::sync::Arc;
 use std::sync::Mutex;
 
+use super::resources::ResourceRegistry;
 use super::ModuleAllocator;
 
 type PipelineRunFn = fn(
@@ -26,9 +27,23 @@ type PipelineRunFn = fn(
 type PipelinInitFn = fn(*const PipelineInterface) -> bool;
 type PipelinInfoFn = fn(*mut *const u8, *mut usize) -> bool;
 
-extern "C" fn alloc(allocator: *mut c_void, size: usize) -> *mut u8 {
-    let allocator = allocator as *mut ModuleAllocator;
-    unsafe { (*allocator).alloc(size).unwrap_or(std::ptr::null_mut()) }
+// Actual C interface
+extern "C" fn alloc(interface: *mut c_void, size: usize) -> *mut u8 {
+    let interface = interface as *mut PipelineInterface;
+    unsafe {
+        (*interface.allocator)
+            .alloc(size)
+            .unwrap_or(std::ptr::null_mut())
+    }
+}
+
+extern "C" fn load_resource(interface: *mut c_void, size: usize) -> *mut u8 {
+    let interface = interface as *mut PipelineInterface;
+    unsafe {
+        (*interface.allocator)
+            .alloc(size)
+            .unwrap_or(std::ptr::null_mut())
+    }
 }
 
 pub type MetadataType = TypedReader<
@@ -133,6 +148,7 @@ impl Module {
     /// Load, initialize and request metadata of the module
     pub fn load(
         allocator: Arc<ModuleAllocator>,
+        resource_registry: Arc<ResourceRegistry>,
         file_name: &Path,
     ) -> Result<Module, Box<dyn Error>> {
         let lib = libloading::Library::new(file_name)?;
@@ -191,14 +207,11 @@ impl Module {
         if !result {
             return Err(PipelineRunError::InfoFailed.into());
         }
-        let slice = unsafe { std::slice::from_raw_parts(metadata, metadata_size) };
-        let mut cursor = Cursor::new(slice);
+        let msg = divvun_schema::util::read_message::<
+            divvun_schema::module_metadata_capnp::module_metadata::Owned,
+        >(metadata, metadata_size)?;
 
-        let message =
-            capnp::serialize::read_message(&mut cursor, capnp::message::ReaderOptions::new())
-                .unwrap();
-
-        Ok(TypedReader::new(message))
+        Ok(msg)
     }
 
     pub fn call_run(
@@ -225,15 +238,9 @@ impl Module {
 
         info!("result = {} output size = {}", result, output_size);
         if !result {
-            let output_slice = unsafe { std::slice::from_raw_parts(output, output_size) };
-            let mut output_cursor = Cursor::new(output_slice);
-            let msg = ::capnp::serialize::read_message(
-                &mut output_cursor,
-                capnp::message::ReaderOptions::new(),
-            )?;
-
-            let error = msg.get_root::<pipeline_error::Reader>()?;
-            let message = error.get_message()?;
+            let msg =
+                divvun_schema::util::read_message::<pipeline_error::Owned>(output, output_size)?;
+            let message = msg.get()?.get_message()?;
             error!("an error happened: {}", message);
             Err(Box::new(PipelineRunError::Error(TypedReader::from(msg))))
         } else {

@@ -1,4 +1,6 @@
 use crate::interface;
+use capnp::message::TypedReader;
+use std::error::Error;
 use std::io::Cursor;
 use std::result::Result;
 use std::slice;
@@ -28,6 +30,17 @@ macro_rules! capnp_error {
             builder.set_message($m);
         })
     }};
+}
+
+pub fn read_message<T: for<'a> capnp::traits::Owned<'a>>(
+    input: *const u8,
+    input_size: usize,
+) -> Result<TypedReader<capnp::serialize::OwnedSegments, T>, Box<dyn Error>> {
+    let slice = unsafe { std::slice::from_raw_parts(input, input_size) };
+    let mut cursor = Cursor::new(slice);
+    let message =
+        capnp::serialize::read_message(&mut cursor, capnp::message::ReaderOptions::new())?;
+    Ok(message.into())
 }
 
 /// This uses the interface allocator to allocate enough memory for the passed in message

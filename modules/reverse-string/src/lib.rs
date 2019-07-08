@@ -31,13 +31,25 @@ pub extern "C" fn pipeline_run(
     let input_sizes = unsafe { std::slice::from_raw_parts(input_sizes, input_count) };
     let input = unsafe { std::slice::from_raw_parts(input, input_count) };
 
+    if input.len() == 0 {
+        util::output_message(
+            output,
+            output_size,
+            divvun_schema::capnp_error!(
+                divvun_schema::error_capnp::pipeline_error::ErrorKind::ModuleError,
+                "no input provided"
+            ),
+        )
+        .unwrap();
+        return false;
+    }
+
     match &*command {
         "reverse" => {
             for i in 0..input_count {
-                let slice = unsafe { std::slice::from_raw_parts(input[i], input_sizes[i]) };
-                let mut cursor = Cursor::new(slice);
-                let message = serialize::read_message(&mut cursor, ReaderOptions::new()).unwrap();
-                let string = message.get_root::<string::Reader>().unwrap();
+                let message =
+                    util::read_message::<string::Owned>(input[i], input_sizes[i]).unwrap();
+                let string = message.get().unwrap();
                 let result: String = string.get_string().unwrap().chars().rev().collect();
                 println!(
                     "receives input {}, returning {}",
@@ -59,17 +71,15 @@ pub extern "C" fn pipeline_run(
                 return true;
             }
 
-            util::output_message(
-                output,
-                output_size,
-                divvun_schema::capnp_error!(
-                    divvun_schema::error_capnp::pipeline_error::ErrorKind::ModuleError,
-                    "no input provided"
-                ),
-            )
-            .unwrap();
-
             false
+        }
+        "reverse_resource" => {
+            let message = util::read_message::<string::Owned>(input[0], input_sizes[0]).unwrap();
+            let string = message.get().unwrap();
+            let resource = string.get_string().unwrap();
+            println!("loading resource {}", resource);
+
+            true
         }
         _ => {
             util::output_message(
@@ -170,6 +180,7 @@ pub extern "C" fn pipeline_info(metadata: *mut *const u8, metadata_size: *mut us
         static ref MESSAGE: Vec<u8> = divvun_schema::util::message_to_vec(
             capnp_message!(divvun_schema::module_metadata_capnp::module_metadata::Builder, builder => {
                 builder.set_module_name("reverse-string");
+                builder.set_module_version("0.0.1");
                 let mut commands = builder.init_commands(1);
                 {
                     use capnp::traits::HasTypeId;
