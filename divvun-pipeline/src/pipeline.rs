@@ -248,5 +248,6 @@ mod tests {
         let result = string.get_string().unwrap();
 
         println!("{:?}", result);
+        assert_eq!("EREH ENOD SNOITATUPMOC GIB AHello world!", result);
     }
 }
