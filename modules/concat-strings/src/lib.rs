@@ -26,19 +26,26 @@ extern "C" fn pipeline_run(
     output: *mut *const u8,
     output_size: *mut usize,
 ) -> bool {
+    println!("hello from concat");
+
     let command = unsafe { CStr::from_ptr(command) }.to_string_lossy();
     let input_sizes = unsafe { std::slice::from_raw_parts(input_sizes, input_count) };
     let input = unsafe { std::slice::from_raw_parts(input, input_count) };
+
+    println!("command = {}, input_count = {}", command, input_count);
 
     match &*command {
         "concat" => {
             let mut long_string = String::new();
             for i in 0..input_count {
+                println!("i: {:?}", i);
                 let slice = unsafe { std::slice::from_raw_parts(input[i], input_sizes[i]) };
                 let mut cursor = Cursor::new(slice);
                 let message = serialize::read_message(&mut cursor, ReaderOptions::new()).unwrap();
                 let string = message.get_root::<string::Reader>().unwrap();
                 let result = string.get_string().unwrap();
+
+                println!("result: {:?}", result);
 
                 long_string.push_str(result);
             }

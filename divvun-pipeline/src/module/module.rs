@@ -163,7 +163,7 @@ impl Module {
         &self.metadata
     }
 
-    pub fn call_init(&mut self) -> Result<(), Box<dyn Error>> {
+    pub fn call_init(&self) -> Result<(), Box<dyn Error>> {
         let func: libloading::Symbol<PipelinInitFn> =
             unsafe { self.library.get(b"pipeline_init")? };
 
@@ -202,7 +202,7 @@ impl Module {
     }
 
     pub fn call_run(
-        &mut self,
+        &self,
         command: &str,
         input: Vec<*const u8>,
         input_sizes: Vec<usize>,
@@ -240,5 +240,11 @@ impl Module {
                 output_size,
             })
         }
+    }
+}
+
+impl Drop for Module {
+    fn drop(&mut self) {
+        println!("Module dropped");
     }
 }

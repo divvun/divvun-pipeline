@@ -1,8 +1,16 @@
-use std::sync::Arc;
 use std::error::Error;
+use std::path::Path;
+use std::sync::Arc;
 
 use futures::future::{join_all, FutureExt};
 use serde::{Deserialize, Serialize};
+
+use divvun_schema::capnp_message;
+use divvun_schema::string_capnp::string;
+
+use capnp::message::ReaderOptions;
+use capnp::serialize;
+use std::io::Cursor;
 
 use crate::module::ModuleRegistry;
 
@@ -36,20 +44,35 @@ pub enum PipelineNodeParallel {
     ParallelMultiple(Vec<PipelineNodeSerial>),
 }
 
-type PipelineType = Arc<Vec<Arc<String>>>;
+#[derive(Debug)]
+pub struct PipelineData {
+    data: *const u8,
+    size: usize,
+}
+
+type PipelineType = Arc<Vec<Arc<PipelineData>>>;
+
+unsafe impl Send for PipelineData {}
+unsafe impl Sync for PipelineData {}
 
 impl Pipeline {
-    pub async fn run(&self, registry: Arc<ModuleRegistry>, input: PipelineType) -> Result<PipelineType, PipelineError> {
+    pub async fn run(
+        &self,
+        registry: Arc<ModuleRegistry>,
+        input: PipelineType,
+    ) -> Result<PipelineType, PipelineError> {
         self.root.run(registry, input).await
     }
 }
 
 impl PipelineNodeSerial {
-    async fn run(&self, registry: Arc<ModuleRegistry>, input: PipelineType) -> Result<PipelineType, PipelineError> {
+    async fn run(
+        &self,
+        registry: Arc<ModuleRegistry>,
+        input: PipelineType,
+    ) -> Result<PipelineType, PipelineError> {
         match self {
-            PipelineNodeSerial::SerialSingle(command) => {
-                process_single(registry, command, input)
-            }
+            PipelineNodeSerial::SerialSingle(command) => process_single(registry, command, input),
             PipelineNodeSerial::SerialMultiple(nodes) => {
                 let mut input = input.clone();
 
@@ -64,7 +87,11 @@ impl PipelineNodeSerial {
 }
 
 impl PipelineNodeParallel {
-    async fn run(&self, registry: Arc<ModuleRegistry>, input: PipelineType) -> Result<PipelineType, PipelineError> {
+    async fn run(
+        &self,
+        registry: Arc<ModuleRegistry>,
+        input: PipelineType,
+    ) -> Result<PipelineType, PipelineError> {
         match self {
             PipelineNodeParallel::ParallelSingle(command) => {
                 process_single(registry, command, input)
@@ -84,17 +111,15 @@ impl PipelineNodeParallel {
                 let outputs = future_results
                     .into_iter()
                     .map(|result_vec| {
-                        let mut vector: Vec<Arc<String>> = Vec::new();
+                        let mut vector: Vec<Arc<PipelineData>> = Vec::new();
 
                         match result_vec {
                             Ok(arced_vec) => {
-                                for string in arced_vec.iter() {
-                                    vector.push(string.clone());
+                                for data in arced_vec.iter() {
+                                    vector.push(data.clone());
                                 }
-                            },
-                            Err(e) => {
-                                errors.push(e)
                             }
+                            Err(e) => errors.push(e),
                         }
 
                         vector
@@ -113,36 +138,47 @@ impl PipelineNodeParallel {
     }
 }
 
-fn process_single(registry: Arc<ModuleRegistry>, command: &PipelineCommand, input: PipelineType) -> Result<PipelineType, PipelineError> {
-    // TODO: fix this mess
+fn process_single(
+    registry: Arc<ModuleRegistry>,
+    command: &PipelineCommand,
+    input: PipelineType,
+) -> Result<PipelineType, PipelineError> {
+    // TODO: fix errors
     let module = registry.get_module(&command.module).unwrap();
-    let metadata_mutex = module.metadata().as_ref().unwrap();
-    let metadata_lock = metadata_mutex.lock().unwrap();
-    let metadata = metadata_lock.get().unwrap();
 
-    let module_name = metadata.get_module_name().unwrap();
-    let commands = metadata.get_commands().unwrap();
+    let mut ptr_vec = Vec::new();
+    let mut size_vec = Vec::new();
 
-    Ok(Arc::new(vec![Arc::new(format!(
-        "|{} {} ran on input:{:?}\n|",
-        &module_name, &command.command, input
-    ))]))
+    let input_map = input.iter().for_each(|data| {
+        ptr_vec.push(data.data);
+        size_vec.push(data.size);
+    });
+
+    let output = module
+        .call_run(&command.command, ptr_vec, size_vec)
+        .unwrap();
+
+    Ok(Arc::new(vec![Arc::new(PipelineData {
+        data: output.output,
+        size: output.output_size,
+    })]))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::module::{AllocationType, ModuleAllocator};
     use serde_json::json;
-    use crate::module::{ModuleAllocator, AllocationType};
 
     #[test]
     fn init() {
         env_logger::init();
 
         let allocator = Arc::new(ModuleAllocator::new(AllocationType::Memory));
-        let registry = ModuleRegistry::new(allocator).unwrap();
+        let mut registry = ModuleRegistry::new(allocator).unwrap();
+        registry.add_search_path(Path::new("../modules"));
 
-        let mut module = registry.get_module("reverse_string").unwrap();
+        let module = registry.get_module("reverse_string").unwrap();
         let inputs: Vec<*const u8> = Vec::new();
         let input_sizes: Vec<usize> = Vec::new();
 
@@ -153,19 +189,20 @@ mod tests {
         println!("Hello, world!");
     }
 
-    #[ignore]
     #[runtime::test]
     async fn pipeline_run() {
+        let _ = env_logger::builder().is_test(true).try_init();
+
         let json_nodes = json!([
-            { "module": "example-mod-1", "command": "tokenize"},
-            [
+            { "module": "reverse_string", "command": "reverse"},
+            /*[
                 [
-                    { "module": "example-mod-2", "command": "convertSomehow" },
-                    { "module": "example-mod-1", "command": "grammarCheck" }
+                    { "module": "reverse_string", "command": "reverse" },
+                    { "module": "do_things_strings", "command": "badazzle" }
                 ],
-                { "module": "divvunspell", "command": "suggest" }
-            ],
-            { "module": "example-mod-4", "command": "convertToJson" }
+                { "module": "concat_strings", "command": "concat" }
+            ],*/
+            //{ "module": "concat_strings", "command": "concat" }
         ]);
 
         let json_str = serde_json::to_string(&json_nodes).unwrap();
@@ -174,14 +211,39 @@ mod tests {
         };
 
         let allocator = Arc::new(ModuleAllocator::new(AllocationType::Memory));
-        let registry = Arc::new(ModuleRegistry::new(allocator).unwrap());
+        let mut registry = ModuleRegistry::new(allocator).unwrap();
+        registry.add_search_path(Path::new("../modules"));
+
+        let msg = capnp_message!(string::Builder, builder => {
+            builder.set_string("Hello world!");
+        });
+
+        let msg_vec = divvun_schema::util::message_to_vec(msg).unwrap();
 
         let result = pipeline
             .run(
-                Arc::clone(&registry),
-                Arc::new(vec![Arc::new("initial string".to_owned())]),
+                Arc::new(registry),
+                Arc::new(vec![Arc::new(PipelineData {
+                    data: msg_vec.as_ptr(),
+                    size: msg_vec.len(),
+                })]),
             )
             .await;
+
+        let inter_output = result.unwrap();
+        let output = inter_output.get(0).unwrap();
+
+        let output_data = output.data;
+        let output_size = output.size;
+
+        println!("output: {:?}", output);
+        let slice = unsafe { std::slice::from_raw_parts(output_data, output_size) };
+
+        println!("slice: {:#?}", slice);
+        let mut cursor = Cursor::new(slice);
+        let message = serialize::read_message(&mut cursor, ReaderOptions::new()).unwrap();
+        let string = message.get_root::<string::Reader>().unwrap();
+        let result = string.get_string().unwrap();
 
         println!("{:?}", result);
     }

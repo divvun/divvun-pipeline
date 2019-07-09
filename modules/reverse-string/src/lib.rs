@@ -53,6 +53,9 @@ pub extern "C" fn pipeline_run(
                 )
                 .unwrap();
 
+                println!(
+                    "returning from reverse");
+
                 return true;
             }
 

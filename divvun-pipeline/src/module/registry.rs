@@ -5,6 +5,8 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use parking_lot::RwLock;
+
 use super::{Module, ModuleAllocator};
 
 #[derive(Debug)]
@@ -34,7 +36,7 @@ impl Error for ModuleLoadError {}
 pub struct ModuleRegistry {
     allocator: Arc<ModuleAllocator>,
     search_paths: HashSet<PathBuf>,
-    registry: HashMap<String, Module>,
+    registry: RwLock<HashMap<String, Arc<Module>>>,
 }
 
 impl ModuleRegistry {
@@ -51,7 +53,7 @@ impl ModuleRegistry {
         Ok(ModuleRegistry {
             allocator,
             search_paths,
-            registry: HashMap::new(),
+            registry: RwLock::new(HashMap::new()),
         })
     }
 
@@ -63,7 +65,17 @@ impl ModuleRegistry {
     /// Enumerate the registry's search paths and try to load the module with the given name.
     /// If found, initializes the module and returns it. Alternatively returns a list of
     /// errors for each attempted load (if there are multiple search paths).
-    pub fn get_module(&self, module_name: &str) -> Result<Module, Box<dyn Error>> {
+    pub fn get_module(&self, module_name: &str) -> Result<Arc<Module>, Box<dyn Error>> {
+        info!("module name: {}", module_name);
+
+        {
+            let lock = self.registry.read();
+
+            if lock.contains_key(module_name) {
+                return Ok(Arc::clone(lock.get(module_name).unwrap()));
+            }
+        }
+
         let ext = if cfg!(target_os = "mac") {
             "dylib"
         } else if cfg!(target_os = "windows") {
@@ -81,9 +93,17 @@ impl ModuleRegistry {
         let mut errors = Vec::new();
         for path in load_paths {
             info!("trying to load from {}", path.display());
+            //println!("trying to load from {}", path.display());
             let module = Module::load(self.allocator.clone(), &path);
+
             match module {
-                Ok(module) => return Ok(module),
+                Ok(module) => {
+                    let module = Arc::new(module);
+                    let mut lock = self.registry.write();
+                    lock.insert(module_name.to_owned(), Arc::clone(&module));
+
+                    return Ok(module)
+                },
                 Err(err) => errors.push(err),
             };
         }

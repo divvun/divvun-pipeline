@@ -38,11 +38,16 @@ pub fn output_message<A: capnp::message::Allocator>(
     output_size: *mut usize,
     message: capnp::message::Builder<A>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    println!("output_message1");
     let serialized_size = capnp::serialize::compute_serialized_size_in_words(&message)
         * std::mem::size_of::<capnp::Word>();
+    println!("output_message2");
     let memory = interface::allocate(serialized_size).expect("memory to be allocated");
+    println!("output_message3");
     let slice = unsafe { slice::from_raw_parts_mut(memory, serialized_size) };
+    println!("output_message4");
     let mut cursor = Cursor::new(slice);
+    println!("output_message5");
     capnp::serialize::write_message(&mut cursor, &message)?;
     unsafe {
         *output = memory;
