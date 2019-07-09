@@ -195,14 +195,15 @@ mod tests {
 
         let json_nodes = json!([
             { "module": "reverse_string", "command": "reverse"},
-            /*[
-                [
-                    { "module": "reverse_string", "command": "reverse" },
-                    { "module": "do_things_strings", "command": "badazzle" }
-                ],
-                { "module": "concat_strings", "command": "concat" }
-            ],*/
-            //{ "module": "concat_strings", "command": "concat" }
+              [
+                 [
+                    { "module": "do_things_strings", "command": "badazzle" },
+                    { "module": "reverse_string", "command": "reverse" }
+                 ],
+                 
+                 { "module": "reverse_string", "command": "reverse" }
+             ],
+            { "module": "concat_strings", "command": "concat" }
         ]);
 
         let json_str = serde_json::to_string(&json_nodes).unwrap();
@@ -213,6 +214,7 @@ mod tests {
         let allocator = Arc::new(ModuleAllocator::new(AllocationType::Memory));
         let mut registry = ModuleRegistry::new(allocator).unwrap();
         registry.add_search_path(Path::new("../modules"));
+        let registry = Arc::new(registry);
 
         let msg = capnp_message!(string::Builder, builder => {
             builder.set_string("Hello world!");
@@ -222,7 +224,7 @@ mod tests {
 
         let result = pipeline
             .run(
-                Arc::new(registry),
+                registry.clone(),
                 Arc::new(vec![Arc::new(PipelineData {
                     data: msg_vec.as_ptr(),
                     size: msg_vec.len(),

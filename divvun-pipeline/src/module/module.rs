@@ -98,7 +98,7 @@ impl Error for PipelineRunError {}
 pub struct Module {
     library: libloading::Library,
     allocator: Arc<ModuleAllocator>,
-    interface: PipelineInterface,
+    pub interface: PipelineInterface,
     metadata: Option<Mutex<MetadataType>>,
 }
 
@@ -141,19 +141,19 @@ impl Module {
             alloc_fn: alloc,
         };
 
-        let mut module = Module {
+        println!("if load {:?}", interface);
+
+        let module = Module {
             library: lib,
             allocator,
             interface,
             metadata: None,
         };
 
-        module.call_init()?;
+        // let metadata = module.call_info()?;
+        // log_metadata(&metadata)?;
 
-        let metadata = module.call_info()?;
-        log_metadata(&metadata)?;
-
-        module.metadata = Some(Mutex::new(metadata));
+        // module.metadata = Some(Mutex::new(metadata));
 
         Ok(module)
     }
@@ -178,7 +178,7 @@ impl Module {
         Ok(())
     }
 
-    pub fn call_info(&mut self) -> Result<MetadataType, Box<dyn Error>> {
+    pub fn call_info(&self) -> Result<MetadataType, Box<dyn Error>> {
         let func: libloading::Symbol<PipelinInfoFn> =
             unsafe { self.library.get(b"pipeline_info")? };
 
@@ -207,11 +207,13 @@ impl Module {
         input: Vec<*const u8>,
         input_sizes: Vec<usize>,
     ) -> Result<PipelineRunResult, Box<dyn Error>> {
+        println!("if R A{:?}", self.interface);
         let func: libloading::Symbol<PipelineRunFn> = unsafe { self.library.get(b"pipeline_run")? };
 
         let command = CString::new(command)?;
         let mut output: *const u8 = std::ptr::null();
         let mut output_size: usize = 0;
+        println!("if R B {:?}", self.interface);
         let result = func(
             command.as_ptr(),
             input.len(),

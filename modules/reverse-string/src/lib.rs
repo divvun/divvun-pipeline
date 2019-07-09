@@ -11,6 +11,7 @@ use std::os::raw::c_char;
 
 #[no_mangle]
 pub extern "C" fn pipeline_init(interface: *const PipelineInterface) -> bool {
+    println!("pipeline_init reverse-string");
     interface::initialize(interface)
 }
 
@@ -53,8 +54,7 @@ pub extern "C" fn pipeline_run(
                 )
                 .unwrap();
 
-                println!(
-                    "returning from reverse");
+                println!("returning from reverse");
 
                 return true;
             }

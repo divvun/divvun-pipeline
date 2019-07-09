@@ -36,7 +36,7 @@ extern "C" fn pipeline_run(
                     output,
                     output_size,
                     capnp_message!(string::Builder, builder => {
-                        builder.set_string("Hello world!");
+                        builder.set_string("A BIG COMPUTATIONS DONE HERE");
                     }),
                 )
                 .unwrap();
