@@ -4,6 +4,6 @@ members = [
     "divvun-pipeline",
     "divvun-schema",
     "modules/reverse-string",
-    # "modules/concat-strings",
-    # "modules/do-things-strings",
+    "modules/concat-strings",
+    "modules/do-things-strings",
 ]
