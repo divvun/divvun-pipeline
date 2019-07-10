@@ -1,4 +1,4 @@
-use capnp::message::{Reader, TypedReader};
+use capnp::message::TypedReader;
 use divvun_schema::{error_capnp::pipeline_error, interface::PipelineInterface};
 use std::{ffi::CStr, fmt};
 
@@ -60,11 +60,7 @@ impl ModuleInterfaceData {
     }
 
     pub fn release_resource(&self, name: &str) -> bool {
-        if let Some(handle) = self.resource_registry.get(name) {
-            return self.resource_handles.lock().remove(name).is_some();
-        }
-
-        false
+        return self.resource_handles.lock().remove(name).is_some();
     }
 }
 
@@ -173,6 +169,7 @@ impl fmt::Display for PipelineRunError {
 
 impl Error for PipelineRunError {}
 
+#[allow(unused)]
 pub struct Module {
     library: libloading::Library,
     allocator: Arc<ModuleAllocator>,

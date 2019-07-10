@@ -1,4 +1,3 @@
-use log::info;
 use std::{
     collections::{HashMap, HashSet},
     error::Error,
@@ -21,9 +20,9 @@ impl fmt::Display for ModuleLoadError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             ModuleLoadError::LoadFailed(ref parent_errors) => {
-                writeln!(f, "Module load failed:");
+                writeln!(f, "Module load failed:")?;
                 for error in parent_errors {
-                    writeln!(f, "{}", error);
+                    writeln!(f, "{}", error)?;
                 }
             }
         };

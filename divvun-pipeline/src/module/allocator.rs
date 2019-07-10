@@ -1,4 +1,3 @@
-use log::info;
 use memmap::{MmapMut, MmapOptions};
 use parking_lot::RwLock;
 use std::error::Error;
