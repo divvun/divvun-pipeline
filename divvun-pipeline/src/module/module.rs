@@ -6,6 +6,7 @@ use std::fmt;
 
 use log::{error, info};
 use parking_lot::Mutex;
+use std::collections::HashMap;
 use std::error::Error;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_void};
@@ -30,7 +31,7 @@ type PipelinInfoFn = fn(*mut *const u8, *mut usize) -> bool;
 struct ModuleInterfaceData {
     pub allocator: Arc<ModuleAllocator>,
     pub resource_registry: Arc<ResourceRegistry>,
-    resource_handles: Mutex<Vec<Arc<ResourceHandle>>>,
+    resource_handles: Mutex<HashMap<String, Arc<ResourceHandle>>>,
 }
 
 impl ModuleInterfaceData {
@@ -41,7 +42,7 @@ impl ModuleInterfaceData {
         ModuleInterfaceData {
             allocator,
             resource_registry,
-            resource_handles: Mutex::new(Vec::new()),
+            resource_handles: Mutex::new(HashMap::new()),
         }
     }
 
@@ -49,11 +50,21 @@ impl ModuleInterfaceData {
         if let Some(handle) = self.resource_registry.get(name) {
             let handle = Arc::new(handle);
             // Keep track of the handle
-            self.resource_handles.lock().push(handle.clone());
+            self.resource_handles
+                .lock()
+                .insert(name.to_string(), handle.clone());
             return Some(handle);
         }
 
         None
+    }
+
+    pub fn release_resource(&self, name: &str) -> bool {
+        if let Some(handle) = self.resource_registry.get(name) {
+            return self.resource_handles.lock().remove(name).is_some();
+        }
+
+        false
     }
 }
 
@@ -67,7 +78,7 @@ extern "C" fn alloc(data: *mut c_void, size: usize) -> *mut u8 {
             &*(*data).allocator as *const _
         );
     }
-    // let data = unsafe { (*data).lock() };
+
     unsafe {
         (*data)
             .allocator
@@ -84,7 +95,6 @@ extern "C" fn load_resource(
 ) -> bool {
     let name = unsafe { CStr::from_ptr(name).to_string_lossy() };
     let data = data as *mut ModuleInterfaceData;
-    // let mut data = unsafe { (*data).lock() };
 
     let handle = unsafe { (*data).load_resource(&*name) };
 
@@ -97,6 +107,13 @@ extern "C" fn load_resource(
     }
 
     false
+}
+
+extern "C" fn release_resource(data: *mut c_void, name: *const c_char) -> bool {
+    let name = unsafe { CStr::from_ptr(name).to_string_lossy() };
+    let data = data as *mut ModuleInterfaceData;
+
+    unsafe { (*data).release_resource(&*name) }
 }
 
 pub type MetadataType = TypedReader<
@@ -216,6 +233,7 @@ impl Module {
             data: &*interface_data as *const _ as *mut _,
             alloc_fn: alloc,
             load_resource_fn: load_resource,
+            release_resource_fn: release_resource,
         });
 
         let module = Arc::new(Module {
