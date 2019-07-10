@@ -195,11 +195,21 @@ pub extern "C" fn pipeline_info(metadata: *mut *const u8, metadata_size: *mut us
             capnp_message!(divvun_schema::module_metadata_capnp::module_metadata::Builder, builder => {
                 builder.set_module_name("reverse-string");
                 builder.set_module_version("0.0.1");
-                let mut commands = builder.init_commands(1);
+                let mut commands = builder.init_commands(2);
                 {
                     use capnp::traits::HasTypeId;
                     let mut command = commands.reborrow().get(0);
                     command.set_name("reverse");
+                    command.set_output(divvun_schema::string_capnp::string::Builder::type_id());
+                    let inputs = command.init_inputs(1);
+                    {
+                        inputs.reborrow().set(0, divvun_schema::string_capnp::string::Builder::type_id());
+                    }
+                }
+                {
+                    use capnp::traits::HasTypeId;
+                    let mut command = commands.reborrow().get(1);
+                    command.set_name("reverse_resource");
                     command.set_output(divvun_schema::string_capnp::string::Builder::type_id());
                     let inputs = command.init_inputs(1);
                     {

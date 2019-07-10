@@ -226,22 +226,22 @@ impl Module {
             release_resource_fn: release_resource,
         });
 
-        let module = Arc::new(Module {
+        let mut module = Module {
             library: lib,
             allocator,
             interface,
             interface_data,
             metadata: None,
-        });
+        };
 
         module.call_init()?;
 
-        // let metadata = module.call_info()?;
-        // log_metadata(&metadata)?;
+        let metadata = module.call_info()?;
+        log_metadata(&metadata)?;
 
-        // module.metadata = Some(Mutex::new(metadata));
+        module.metadata = Some(Mutex::new(metadata));
 
-        Ok(module)
+        Ok(Arc::new(module))
     }
 
     /// The module's metadata
