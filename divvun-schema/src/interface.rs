@@ -17,11 +17,6 @@ pub struct PipelineInterface {
     // pub release_resource_fn: ReleaseResourceFn,
 }
 
-impl Drop for PipelineInterface {
-    fn drop(&mut self) {
-        println!("drop");
-    }
-}
 unsafe impl Send for PipelineInterface {}
 unsafe impl Sync for PipelineInterface {}
 
@@ -88,12 +83,6 @@ pub static mut PIPELINE_INTERFACE: Option<*const PipelineInterface> = None;
 pub fn allocate(size: usize) -> Option<*mut u8> {
     unsafe {
         if let Some(interface) = PIPELINE_INTERFACE {
-            println!(
-                "interface {:?} {:?} size {}",
-                interface,
-                (*interface).data,
-                size
-            );
             (*interface).alloc(size)
         } else {
             None
@@ -104,7 +93,6 @@ pub fn allocate(size: usize) -> Option<*mut u8> {
 /// To be called by the pipeline module's pipeline_init function to initialize the SDK
 pub fn initialize(interface: *const PipelineInterface) -> bool {
     unsafe {
-        println!("initialize {:?} {:?}", interface, (*interface).data,);
         PIPELINE_INTERFACE = Some(interface);
     }
     true

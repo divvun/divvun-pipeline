@@ -31,7 +31,6 @@ impl Resource {
     }
 
     pub fn unload(&mut self) -> Result<(), Box<dyn Error>> {
-        info!("unload");
         match self {
             Resource::File { ref mut mmap, .. } => {
                 let _ = mmap.take();
@@ -64,7 +63,6 @@ pub struct LoadableResource {
 impl LoadableResource {
     pub fn claim(&self) {
         let last_ref = self.ref_counter.fetch_add(1, Ordering::SeqCst);
-        info!("claim {}", last_ref);
         if last_ref == 0 {
             self.resource
                 .write()
@@ -75,7 +73,6 @@ impl LoadableResource {
 
     pub fn release(&self) {
         let last_ref = self.ref_counter.fetch_sub(1, Ordering::SeqCst);
-        info!("release {}", last_ref);
         if last_ref == 1 {
             self.resource
                 .write()

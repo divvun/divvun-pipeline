@@ -160,7 +160,6 @@ mod tests {
     use super::*;
     use crate::module::{AllocationType, ModuleAllocator};
     use crate::resources::ResourceRegistry;
-use std::error::Error;
 use std::path::Path;
 use std::io::Cursor;
 use divvun_schema::capnp_message;

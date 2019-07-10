@@ -28,12 +28,10 @@ impl ModuleAllocator {
     }
 
     pub fn total_size(&self) -> usize {
-        info!("total size");
         self.mmaps.read().iter().map(|m| m.len()).sum()
     }
 
     pub fn alloc(&self, size: usize) -> Result<*mut u8, Box<dyn Error>> {
-        info!("allocating {} bytes as {:?}", size, self.allocation_type);
         let mut mmap = match self.allocation_type {
             AllocationType::Memory => MmapOptions::new().len(size).map_anon(),
             AllocationType::File => {
@@ -44,9 +42,7 @@ impl ModuleAllocator {
         }?;
 
         let ptr = mmap.as_mut_ptr();
-        info!("allocated to {:?} {}", ptr, self.total_size());
         self.mmaps.write().push(mmap);
-        info!("done");
         Ok(ptr)
     }
 }

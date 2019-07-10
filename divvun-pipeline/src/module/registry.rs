@@ -72,8 +72,6 @@ impl ModuleRegistry {
     /// If found, initializes the module and returns it. Alternatively returns a list of
     /// errors for each attempted load (if there are multiple search paths).
     pub fn get_module(&self, module_name: &str) -> Result<Arc<Module>, Box<dyn Error>> {
-        info!("module name: {}", module_name);
-
         {
             let lock = self.registry.read();
 
@@ -98,7 +96,6 @@ impl ModuleRegistry {
 
         let mut errors = Vec::new();
         for path in load_paths {
-            info!("trying to load from {}", path.display());
             let module = Module::load(
                 self.allocator.clone(),
                 self.resource_registry.clone(),

@@ -1,4 +1,4 @@
-use capnp::message::{HeapAllocator, Reader, TypedReader};
+use capnp::message::{Reader, TypedReader};
 use divvun_schema::error_capnp::pipeline_error;
 use divvun_schema::interface::PipelineInterface;
 use std::ffi::CStr;
@@ -8,10 +8,8 @@ use log::{error, info};
 use parking_lot::Mutex;
 use std::error::Error;
 use std::ffi::CString;
-use std::io::Cursor;
 use std::os::raw::{c_char, c_void};
 use std::path::Path;
-use std::pin::Pin;
 use std::sync::Arc;
 
 use super::ModuleAllocator;
@@ -209,27 +207,16 @@ impl Module {
     ) -> Result<Arc<Module>, Box<dyn Error>> {
         let lib = libloading::Library::new(file_name)?;
 
-        println!("allocator A {:?}", &*allocator as *const _);
         let interface_data = Arc::new(ModuleInterfaceData::new(
             allocator.clone(),
             resource_registry,
         ));
-
-        println!("interface_data B {:?}", &*interface_data as *const _);
-        println!("allocator B {:?}", &*interface_data.allocator as *const _);
 
         let interface = Arc::new(PipelineInterface {
             data: &*interface_data as *const _ as *mut _,
             alloc_fn: alloc,
             load_resource_fn: load_resource,
         });
-
-        println!("interface_data C {:?}", interface.data);
-        println!("allocator C {:?}", unsafe {
-            &*(*(interface.data as *const ModuleInterfaceData)).allocator as *const _
-        });
-
-        println!("if load {:?}", interface);
 
         let module = Arc::new(Module {
             library: lib,
@@ -296,13 +283,11 @@ impl Module {
         input: Vec<*const u8>,
         input_sizes: Vec<usize>,
     ) -> Result<PipelineRunResult, Box<dyn Error>> {
-        println!("if R A{:?}", self.interface);
         let func: libloading::Symbol<PipelineRunFn> = unsafe { self.library.get(b"pipeline_run")? };
 
         let command = CString::new(command)?;
         let mut output: *const u8 = std::ptr::null();
         let mut output_size: usize = 0;
-        println!("if R B {:?}", self.interface);
         let result = func(
             command.as_ptr(),
             input.len(),
@@ -325,11 +310,5 @@ impl Module {
                 output_size,
             })
         }
-    }
-}
-
-impl Drop for Module {
-    fn drop(&mut self) {
-        println!("Module dropped");
     }
 }
