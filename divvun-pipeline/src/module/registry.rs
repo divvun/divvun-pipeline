@@ -106,14 +106,8 @@ impl ModuleRegistry {
             );
             match module {
                 Ok(module) => {
-                    // Note: It is important to call the init after the module in the ARc
-                    let module = Arc::new(module);
-                    module.call_init()?;
-                    println!("if A {:?}", &module.interface as *const _);
                     let mut lock = self.registry.write();
-                    println!("if B {:?}", &module.interface as *const _);
                     lock.insert(module_name.to_owned(), Arc::clone(&module));
-                    println!("if C {:?}", &module.interface as *const _);
 
                     return Ok(module);
                 }

@@ -87,7 +87,7 @@ pub fn initialize(interface: *const PipelineInterface) -> bool {
             "initialize {:?} {:?} {:?} {:?}",
             std::thread::current().id(),
             interface,
-            (*interface).allocator,
+            (*interface).data,
             (*interface).alloc_fn
         );
         PIPELINE_INTERFACE = Some(interface);

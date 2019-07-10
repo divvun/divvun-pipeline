@@ -12,7 +12,7 @@ pub struct ModuleAllocator {
 #[derive(Debug)]
 pub enum AllocationType {
     File,
-    Memory
+    Memory,
 }
 
 impl ModuleAllocator {

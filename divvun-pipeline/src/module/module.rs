@@ -212,13 +212,13 @@ impl Module {
 
         println!("if load {:?}", interface);
 
-        let module = Module {
+        let module = Arc::new(Module {
             library: lib,
             allocator,
             interface,
             interface_data,
             metadata: None,
-        };
+        });
 
         module.call_init()?;
 

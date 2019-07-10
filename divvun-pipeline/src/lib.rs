@@ -3,3 +3,4 @@
 pub mod run;
 pub mod module;
 pub mod pipeline;
+pub mod resources;
