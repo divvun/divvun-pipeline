@@ -1,16 +1,7 @@
-use std::error::Error;
-use std::path::Path;
 use std::sync::Arc;
 
-use futures::future::{join_all, FutureExt};
+use futures::future::join_all;
 use serde::{Deserialize, Serialize};
-
-use divvun_schema::capnp_message;
-use divvun_schema::string_capnp::string;
-
-use capnp::message::ReaderOptions;
-use capnp::serialize;
-use std::io::Cursor;
 
 use crate::module::ModuleRegistry;
 
@@ -46,8 +37,8 @@ pub enum PipelineNodeParallel {
 
 #[derive(Debug)]
 pub struct PipelineData {
-    data: *const u8,
-    size: usize,
+    pub data: *const u8,
+    pub size: usize,
 }
 
 type PipelineType = Arc<Vec<Arc<PipelineData>>>;
@@ -61,6 +52,7 @@ impl Pipeline {
         registry: Arc<ModuleRegistry>,
         input: PipelineType,
     ) -> Result<PipelineType, PipelineError> {
+        // TODO: Validate here
         self.root.run(registry, input).await
     }
 }
@@ -149,7 +141,7 @@ fn process_single(
     let mut ptr_vec = Vec::new();
     let mut size_vec = Vec::new();
 
-    let input_map = input.iter().for_each(|data| {
+    input.iter().for_each(|data| {
         ptr_vec.push(data.data);
         size_vec.push(data.size);
     });
@@ -162,92 +154,4 @@ fn process_single(
         data: output.output,
         size: output.output_size,
     })]))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::module::{AllocationType, ModuleAllocator};
-    use serde_json::json;
-
-    #[test]
-    fn init() {
-        env_logger::init();
-
-        let allocator = Arc::new(ModuleAllocator::new(AllocationType::Memory));
-        let mut registry = ModuleRegistry::new(allocator).unwrap();
-        registry.add_search_path(Path::new("../modules"));
-
-        let module = registry.get_module("reverse_string").unwrap();
-        let inputs: Vec<*const u8> = Vec::new();
-        let input_sizes: Vec<usize> = Vec::new();
-
-        println!("calling init");
-        let result = module.call_init();
-        let result = module.call_run("reverse", inputs, input_sizes);
-        println!("result {:?}", result);
-        println!("Hello, world!");
-    }
-
-    #[runtime::test]
-    async fn pipeline_run() {
-        let _ = env_logger::builder().is_test(true).try_init();
-
-        let json_nodes = json!([
-            { "module": "reverse_string", "command": "reverse"},
-              [
-                 [
-                    { "module": "do_things_strings", "command": "badazzle" },
-                    { "module": "reverse_string", "command": "reverse" }
-                 ],
-                 
-                 { "module": "reverse_string", "command": "reverse" }
-             ],
-            { "module": "concat_strings", "command": "concat" }
-        ]);
-
-        let json_str = serde_json::to_string(&json_nodes).unwrap();
-        let pipeline: Pipeline = Pipeline {
-            root: serde_json::from_str(&json_str).unwrap(),
-        };
-
-        let allocator = Arc::new(ModuleAllocator::new(AllocationType::Memory));
-        let mut registry = ModuleRegistry::new(allocator).unwrap();
-        registry.add_search_path(Path::new("../modules"));
-        let registry = Arc::new(registry);
-
-        let msg = capnp_message!(string::Builder, builder => {
-            builder.set_string("Hello world!");
-        });
-
-        let msg_vec = divvun_schema::util::message_to_vec(msg).unwrap();
-
-        let result = pipeline
-            .run(
-                registry.clone(),
-                Arc::new(vec![Arc::new(PipelineData {
-                    data: msg_vec.as_ptr(),
-                    size: msg_vec.len(),
-                })]),
-            )
-            .await;
-
-        let inter_output = result.unwrap();
-        let output = inter_output.get(0).unwrap();
-
-        let output_data = output.data;
-        let output_size = output.size;
-
-        println!("output: {:?}", output);
-        let slice = unsafe { std::slice::from_raw_parts(output_data, output_size) };
-
-        println!("slice: {:#?}", slice);
-        let mut cursor = Cursor::new(slice);
-        let message = serialize::read_message(&mut cursor, ReaderOptions::new()).unwrap();
-        let string = message.get_root::<string::Reader>().unwrap();
-        let result = string.get_string().unwrap();
-
-        println!("{:?}", result);
-        assert_eq!("EREH ENOD SNOITATUPMOC GIB AHello world!", result);
-    }
 }

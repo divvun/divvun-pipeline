@@ -1,6 +1,21 @@
-use clap::{App, Arg, crate_version};
+#![feature(async_await)]
 
-fn main() {
+use std::fs::File;
+use std::io::BufReader;
+use std::env;
+
+use log::info;
+use clap::{App, Arg, crate_version};
+use serde_json::Value;
+
+use divvun_pipeline::pipeline::Pipeline;
+use divvun_pipeline::run::run;
+
+#[runtime::main]
+async fn main() {
+    env::set_var("RUST_LOG", "info");
+    env_logger::init();
+
     let pipeline = "pipeline";
 
     let matches = App::new("divvun-pipeline")
@@ -14,6 +29,23 @@ fn main() {
         .get_matches();
 
     if let Some(pipeline_file) = matches.value_of(pipeline) {
-        println!("Offered file {}", pipeline_file);
+        info!("Offered file {}", pipeline_file);
+
+        let file = File::open(pipeline_file).unwrap();
+        let reader = BufReader::new(file);
+
+        let value: Value = serde_json::from_reader(reader).unwrap();
+
+        let json_str = serde_json::to_string(&value).unwrap();
+
+        let pipeline: Pipeline = Pipeline {
+            root: serde_json::from_str(&json_str).unwrap(),
+        };
+
+        let output = run(&pipeline).await;
+
+        info!("Output: {}", &output);
+    } else {
+        info!("No file provided, skipping");
     }
 }
