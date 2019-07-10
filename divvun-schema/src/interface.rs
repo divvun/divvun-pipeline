@@ -1,6 +1,4 @@
-use capnp::message::TypedReader;
 use std::ffi::CString;
-use std::fmt;
 use std::os::raw::{c_char, c_void};
 
 pub type AllocFn = extern "C" fn(*mut c_void, usize) -> *mut u8;
@@ -14,7 +12,7 @@ pub struct PipelineInterface {
     pub data: *mut c_void,
     pub alloc_fn: AllocFn,
     pub load_resource_fn: LoadResourceFn,
-    // pub release_resource_fn: ReleaseResourceFn,
+    pub release_resource_fn: ReleaseResourceFn,
 }
 
 unsafe impl Send for PipelineInterface {}
@@ -43,6 +41,11 @@ impl PipelineInterface {
             data,
             data_size,
         })
+    }
+
+    pub fn release_resource(&self, name: &str) -> bool {
+        let cstr = CString::new(name).unwrap();
+        return (self.release_resource_fn)(self.data, cstr.as_ptr());
     }
 }
 
@@ -73,7 +76,7 @@ impl PipelineResource {
 
 impl Drop for PipelineResource {
     fn drop(&mut self) {
-        // TODO: release
+        release_resource(&self.name);
     }
 }
 
@@ -81,13 +84,7 @@ pub static mut PIPELINE_INTERFACE: Option<*const PipelineInterface> = None;
 
 /// To be called by the pipeline module to allocate memory needed for large chunks of data
 pub fn allocate(size: usize) -> Option<*mut u8> {
-    unsafe {
-        if let Some(interface) = PIPELINE_INTERFACE {
-            (*interface).alloc(size)
-        } else {
-            None
-        }
-    }
+    unsafe { PIPELINE_INTERFACE.and_then(|interface| (*interface).alloc(size)) }
 }
 
 /// To be called by the pipeline module's pipeline_init function to initialize the SDK
@@ -99,11 +96,13 @@ pub fn initialize(interface: *const PipelineInterface) -> bool {
 }
 
 pub fn load_resource(name: &str) -> Option<PipelineResource> {
+    unsafe { PIPELINE_INTERFACE.and_then(|interface| (*interface).load_resource(name)) }
+}
+
+pub fn release_resource(name: &str) -> bool {
     unsafe {
-        if let Some(interface) = PIPELINE_INTERFACE {
-            (*interface).load_resource(name)
-        } else {
-            None
-        }
+        PIPELINE_INTERFACE
+            .map(|interface| (*interface).release_resource(name))
+            .unwrap_or(false)
     }
 }
