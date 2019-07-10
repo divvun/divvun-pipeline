@@ -1,7 +1,4 @@
-use std::env;
-use std::fs::File;
-use std::io::Write;
-use std::path::PathBuf;
+use std::{env, fs::File, io::Write, path::PathBuf};
 
 fn main() {
     let mut schema_file_path: PathBuf = PathBuf::from(env::var("OUT_DIR").unwrap());

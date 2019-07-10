@@ -1,17 +1,17 @@
 use capnp::message::{Reader, TypedReader};
-use divvun_schema::error_capnp::pipeline_error;
-use divvun_schema::interface::PipelineInterface;
-use std::ffi::CStr;
-use std::fmt;
+use divvun_schema::{error_capnp::pipeline_error, interface::PipelineInterface};
+use std::{ffi::CStr, fmt};
 
 use log::{error, info};
 use parking_lot::Mutex;
-use std::collections::HashMap;
-use std::error::Error;
-use std::ffi::CString;
-use std::os::raw::{c_char, c_void};
-use std::path::Path;
-use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    error::Error,
+    ffi::CString,
+    os::raw::{c_char, c_void},
+    path::Path,
+    sync::Arc,
+};
 
 use super::ModuleAllocator;
 use crate::resources::{ResourceHandle, ResourceRegistry};
@@ -71,13 +71,6 @@ impl ModuleInterfaceData {
 // Actual C interface
 extern "C" fn alloc(data: *mut c_void, size: usize) -> *mut u8 {
     let data = data as *mut ModuleInterfaceData;
-    unsafe {
-        println!("ALLOC ON RUST: {:?}", data);
-        println!(
-            "ALLOC ON RUST allocator: {:?}",
-            &*(*data).allocator as *const _
-        );
-    }
 
     unsafe {
         (*data)
@@ -264,7 +257,6 @@ impl Module {
             unsafe { self.library.get(b"pipeline_init")? };
 
         info!("pipline_init");
-        info!("init ptr {:?}", &*self.interface as *const _);
         let result = func(&*self.interface);
         info!("pipeline_init result: {}", result);
 

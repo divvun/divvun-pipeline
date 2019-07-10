@@ -1,15 +1,12 @@
 #![feature(async_await)]
 
-use std::fs::File;
-use std::io::BufReader;
-use std::env;
+use std::{env, fs::File, io::BufReader};
 
+use clap::{crate_version, App, Arg};
 use log::info;
-use clap::{App, Arg, crate_version};
 use serde_json::Value;
 
-use divvun_pipeline::pipeline::Pipeline;
-use divvun_pipeline::run::run;
+use divvun_pipeline::{pipeline::Pipeline, run::run};
 
 #[runtime::main]
 async fn main() {
@@ -22,10 +19,11 @@ async fn main() {
         .version(crate_version!())
         .author("projektir <oprojektir@gmail.com>")
         .about("Asynchronous parallel pipeline for text processing.")
-            .arg(Arg::with_name(pipeline)
+        .arg(
+            Arg::with_name(pipeline)
                 .help("The .zpipe file with the requested pipeline flow and required resources")
-                .index(1)
-            )
+                .index(1),
+        )
         .get_matches();
 
     if let Some(pipeline_file) = matches.value_of(pipeline) {

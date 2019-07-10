@@ -1,6 +1,6 @@
-use std::sync::Arc;
 use futures::future::join_all;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 use crate::module::ModuleRegistry;
 
@@ -158,15 +158,14 @@ fn process_single(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::module::{AllocationType, ModuleAllocator};
-    use crate::resources::ResourceRegistry;
-use std::path::Path;
-use std::io::Cursor;
-use divvun_schema::capnp_message;
-use capnp::serialize;
-use capnp::message::ReaderOptions;
-use divvun_schema::string_capnp::string;
+    use crate::{
+        module::{AllocationType, ModuleAllocator},
+        resources::ResourceRegistry,
+    };
+    use capnp::{message::ReaderOptions, serialize};
+    use divvun_schema::{capnp_message, string_capnp::string};
     use serde_json::json;
+    use std::{io::Cursor, path::Path};
 
     #[test]
     fn init() {

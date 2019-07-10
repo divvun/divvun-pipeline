@@ -1,13 +1,13 @@
 use log::info;
 use memmap::{Mmap, MmapOptions};
-use std::ops::Deref;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::{
+    ops::Deref,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
 use std::sync::Arc;
 
-use std::error::Error;
-use std::fs::File;
-use std::path::PathBuf;
+use std::{error::Error, fs::File, path::PathBuf};
 
 use parking_lot::RwLock;
 use std::collections::HashMap;

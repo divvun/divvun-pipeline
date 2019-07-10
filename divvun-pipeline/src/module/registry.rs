@@ -1,9 +1,11 @@
 use log::info;
-use std::collections::{HashMap, HashSet};
-use std::error::Error;
-use std::fmt;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::{
+    collections::{HashMap, HashSet},
+    error::Error,
+    fmt,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use parking_lot::RwLock;
 

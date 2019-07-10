@@ -1,9 +1,10 @@
-use std::path::Path;
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
-use divvun_pipeline::module::*;
-use divvun_pipeline::pipeline::*;
-use divvun_pipeline::resources::{LoadableResource, Resource, ResourceRegistry};
+use divvun_pipeline::{
+    module::*,
+    pipeline::*,
+    resources::{LoadableResource, Resource, ResourceRegistry},
+};
 
 pub fn setup_test_registry(
     allocation_type: AllocationType,

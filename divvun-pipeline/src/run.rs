@@ -1,22 +1,24 @@
-use std::fs::File;
-use std::io::{BufReader, Cursor};
-use std::sync::Arc;
-use std::path::Path;
-use std::env;
+use std::{
+    env,
+    fs::File,
+    io::{BufReader, Cursor},
+    path::Path,
+    sync::Arc,
+};
 
+use clap::{crate_version, App, Arg};
 use log::info;
-use clap::{App, Arg, crate_version};
 use serde_json::Value;
 
-use crate::module::{AllocationType, ModuleAllocator, ModuleRegistry};
-use crate::pipeline::{Pipeline, PipelineData};
+use crate::{
+    module::{AllocationType, ModuleAllocator, ModuleRegistry},
+    pipeline::{Pipeline, PipelineData},
+};
 
-use divvun_schema::capnp_message;
-use divvun_schema::string_capnp::string;
 use crate::resources::ResourceRegistry;
+use divvun_schema::{capnp_message, string_capnp::string};
 
-use capnp::message::ReaderOptions;
-use capnp::serialize;
+use capnp::{message::ReaderOptions, serialize};
 
 pub async fn run(pipeline: &Pipeline) -> String {
     let allocator = Arc::new(ModuleAllocator::new(AllocationType::Memory));

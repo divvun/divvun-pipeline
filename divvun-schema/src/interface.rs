@@ -1,5 +1,7 @@
-use std::ffi::CString;
-use std::os::raw::{c_char, c_void};
+use std::{
+    ffi::CString,
+    os::raw::{c_char, c_void},
+};
 
 pub type AllocFn = extern "C" fn(*mut c_void, usize) -> *mut u8;
 pub type LoadResourceFn =

@@ -1,14 +1,14 @@
 #![allow(dead_code)]
 
-use std::ffi::CStr;
-use std::os::raw::c_char;
+use std::{ffi::CStr, os::raw::c_char};
 
-use capnp::message::ReaderOptions;
-use capnp::serialize;
-use divvun_schema::capnp_message;
-use divvun_schema::interface::{self, PipelineInterface};
-use divvun_schema::string_capnp::string;
-use divvun_schema::util;
+use capnp::{message::ReaderOptions, serialize};
+use divvun_schema::{
+    capnp_message,
+    interface::{self, PipelineInterface},
+    string_capnp::string,
+    util,
+};
 use lazy_static::lazy_static;
 use std::io::Cursor;
 

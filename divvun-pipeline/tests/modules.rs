@@ -1,11 +1,11 @@
-use std::path::Path;
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
-use divvun_pipeline::module::*;
-use divvun_pipeline::pipeline::*;
-use divvun_pipeline::resources::{LoadableResource, Resource, ResourceRegistry};
-use divvun_schema::string_capnp::string;
-use divvun_schema::util;
+use divvun_pipeline::{
+    module::*,
+    pipeline::*,
+    resources::{LoadableResource, Resource, ResourceRegistry},
+};
+use divvun_schema::{string_capnp::string, util};
 
 mod common;
 

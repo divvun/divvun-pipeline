@@ -1,10 +1,6 @@
 use crate::interface;
 use capnp::message::TypedReader;
-use std::error::Error;
-use std::io::Cursor;
-use std::result::Result;
-use std::slice;
-use std::vec::Vec;
+use std::{error::Error, io::Cursor, result::Result, slice, vec::Vec};
 
 /// Create a message with a capnp structure of the passed in builder type and
 /// invoke the closure.

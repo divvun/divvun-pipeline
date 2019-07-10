@@ -1,13 +1,10 @@
 #![feature(async_await)]
 
-use std::fs::File;
-use std::io::BufReader;
-use std::env;
+use std::{env, fs::File, io::BufReader};
 
 use serde_json::Value;
 
-use divvun_pipeline::pipeline::Pipeline;
-use divvun_pipeline::run::run;
+use divvun_pipeline::{pipeline::Pipeline, run::run};
 
 #[runtime::test]
 async fn pipeline_run_with_json() {
