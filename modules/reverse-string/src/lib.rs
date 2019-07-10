@@ -117,6 +117,7 @@ pub extern "C" fn pipeline_info(metadata: *mut *const u8, metadata_size: *mut us
     lazy_static! {
         static ref MESSAGE: Vec<u8> = divvun_schema::util::message_to_vec(module_metadata! {
             name: "reverse-string",
+            version: "0.0.2",
             commands: {
                 "reverse" => [divvun_schema::string_capnp::string::Builder] => divvun_schema::string_capnp::string::Builder,
                 "reverse_resource" => [divvun_schema::string_capnp::string::Builder] => divvun_schema::string_capnp::string::Builder,

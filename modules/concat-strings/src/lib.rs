@@ -6,6 +6,7 @@ use capnp::{message::ReaderOptions, serialize};
 use divvun_schema::{
     capnp_message,
     interface::{self, PipelineInterface},
+    module_metadata,
     string_capnp::string,
     util,
 };
@@ -79,22 +80,13 @@ extern "C" fn pipeline_run(
 #[no_mangle]
 pub extern "C" fn pipeline_info(metadata: *mut *const u8, metadata_size: *mut usize) -> bool {
     lazy_static! {
-        static ref MESSAGE: Vec<u8> = divvun_schema::util::message_to_vec(
-            capnp_message!(divvun_schema::module_metadata_capnp::module_metadata::Builder, builder => {
-                builder.set_module_name("do-things-strings");
-                let mut commands = builder.init_commands(1);
-                {
-                    use capnp::traits::HasTypeId;
-                    let mut command = commands.reborrow().get(0);
-                    command.set_name("concat");
-                    command.set_output(divvun_schema::string_capnp::string::Builder::type_id());
-                    let inputs = command.init_inputs(1);
-                    {
-                        inputs.reborrow().set(0, divvun_schema::string_capnp::string::Builder::type_id());
-                    }
-                }
-            }),
-        ).unwrap();
+        static ref MESSAGE: Vec<u8> = divvun_schema::util::message_to_vec(module_metadata! {
+            name: "concat-string",
+            version: "0.0.1",
+            commands: {
+                "concat" => [divvun_schema::string_capnp::string::Builder] => divvun_schema::string_capnp::string::Builder,
+            }
+        }).unwrap();
     }
 
     unsafe {

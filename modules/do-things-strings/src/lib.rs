@@ -4,6 +4,7 @@ use capnp::{message::ReaderOptions, serialize};
 use divvun_schema::{
     capnp_message,
     interface::{self, PipelineInterface},
+    module_metadata,
     string_capnp::string,
     util,
 };
@@ -74,61 +75,17 @@ extern "C" fn pipeline_run(
     }
 }
 
-// // Pseudocode macro for declaring module metadata
-// static metadata: ModuleMetadata = module_metadata! {
-//   name: "reverse-string",
-//   commands: {
-//     "reverse" => { input: ReverseInput, output: TokenizedString }
-//   }
-// }
-
-// struct ReverseInput {
-//     string: InputString,
-//     audio: InputAudio
-// }
-
-// extern "C" fn pipeline_info() -> *const ModuleMetadata {
-//     metadata.as_ptr()
-// }
-
 #[no_mangle]
 pub extern "C" fn pipeline_info(metadata: *mut *const u8, metadata_size: *mut usize) -> bool {
-    // module_metadata! {
-    //     name: "reverse-string",
-    //     commands: {
-    //         "reverse" => {},
-    //         "lol" => {},
-    //     }
-    // };
-
     lazy_static! {
-        static ref MESSAGE: Vec<u8> = divvun_schema::util::message_to_vec(
-            capnp_message!(divvun_schema::module_metadata_capnp::module_metadata::Builder, builder => {
-                builder.set_module_name("do-things-strings");
-                let mut commands = builder.init_commands(2);
-                {
-                    use capnp::traits::HasTypeId;
-                    let mut command = commands.reborrow().get(0);
-                    command.set_name("badazzle");
-                    command.set_output(divvun_schema::string_capnp::string::Builder::type_id());
-                    let inputs = command.init_inputs(1);
-                    {
-                        inputs.reborrow().set(0, divvun_schema::string_capnp::string::Builder::type_id());
-                    }
-                }
-                {
-                    use capnp::traits::HasTypeId;
-                    let mut command = commands.reborrow().get(1);
-                    command.set_name("stuff");
-                    command.set_output(divvun_schema::string_capnp::string::Builder::type_id());
-                    let inputs = command.init_inputs(1);
-                    {
-                        inputs.reborrow().set(0, divvun_schema::string_capnp::string::Builder::type_id());
-                    }
-                }
-
-            }),
-        ).unwrap();
+        static ref MESSAGE: Vec<u8> = divvun_schema::util::message_to_vec(module_metadata! {
+            name: "do-things-strings",
+            version: "0.0.1",
+            commands: {
+                "badazzle" => [divvun_schema::string_capnp::string::Builder] => divvun_schema::string_capnp::string::Builder,
+                "stuff" => [divvun_schema::string_capnp::string::Builder] => divvun_schema::string_capnp::string::Builder,
+            }
+        }).unwrap();
     }
 
     unsafe {

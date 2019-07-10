@@ -34,6 +34,10 @@ macro_rules! module_metadata {
         $b.set_module_name($v);
     };
 
+    (@field $b:ident version $v:expr) => {
+        $b.set_module_version($v);
+    };
+
     (@field $b:ident commands { $($ident:expr => [$($ip:ty),* $(,)*] => $op:ty),* $(,)* }) => {
         let mut commands = $b.init_commands(module_metadata!(@count $($ident),*));
         module_metadata!(@commands commands 0; $($ident => [$($ip),*] => $op),* ,);
