@@ -13,13 +13,15 @@ use crate::pipeline::{Pipeline, PipelineData};
 
 use divvun_schema::capnp_message;
 use divvun_schema::string_capnp::string;
+use crate::resources::ResourceRegistry;
 
 use capnp::message::ReaderOptions;
 use capnp::serialize;
 
 pub async fn run(pipeline: &Pipeline) -> String {
     let allocator = Arc::new(ModuleAllocator::new(AllocationType::Memory));
-    let mut registry = ModuleRegistry::new(allocator).unwrap();
+    let resources = Arc::new(ResourceRegistry::new());
+    let mut registry = ModuleRegistry::new(allocator, resources).unwrap();
     registry.add_search_path(Path::new("../modules"));
     let registry = Arc::new(registry);
 

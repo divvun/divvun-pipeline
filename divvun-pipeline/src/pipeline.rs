@@ -1,11 +1,4 @@
-<<<<<<< HEAD
-=======
-use crate::resources::ResourceRegistry;
-use std::error::Error;
-use std::path::Path;
->>>>>>> merge fixes
 use std::sync::Arc;
-
 use futures::future::join_all;
 use serde::{Deserialize, Serialize};
 
@@ -166,6 +159,14 @@ fn process_single(
 mod tests {
     use super::*;
     use crate::module::{AllocationType, ModuleAllocator};
+    use crate::resources::ResourceRegistry;
+use std::error::Error;
+use std::path::Path;
+use std::io::Cursor;
+use divvun_schema::capnp_message;
+use capnp::serialize;
+use capnp::message::ReaderOptions;
+use divvun_schema::string_capnp::string;
     use serde_json::json;
 
     #[test]
