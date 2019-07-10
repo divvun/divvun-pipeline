@@ -1,19 +1,21 @@
 use capnp::message::{HeapAllocator, Reader, TypedReader};
 use divvun_schema::error_capnp::pipeline_error;
 use divvun_schema::interface::PipelineInterface;
+use std::ffi::CStr;
 use std::fmt;
 
 use log::{error, info};
+use parking_lot::Mutex;
 use std::error::Error;
 use std::ffi::CString;
 use std::io::Cursor;
 use std::os::raw::{c_char, c_void};
 use std::path::Path;
+use std::pin::Pin;
 use std::sync::Arc;
-use std::sync::Mutex;
 
-use super::resources::ResourceRegistry;
 use super::ModuleAllocator;
+use crate::resources::{ResourceHandle, ResourceRegistry};
 
 type PipelineRunFn = fn(
     command: *const c_char,
@@ -27,23 +29,66 @@ type PipelineRunFn = fn(
 type PipelinInitFn = fn(*const PipelineInterface) -> bool;
 type PipelinInfoFn = fn(*mut *const u8, *mut usize) -> bool;
 
-// Actual C interface
-extern "C" fn alloc(interface: *mut c_void, size: usize) -> *mut u8 {
-    let interface = interface as *mut PipelineInterface;
-    unsafe {
-        (*interface.allocator)
-            .alloc(size)
-            .unwrap_or(std::ptr::null_mut())
+type ModuleInterfaceData = Arc<Mutex<ModuleInterfaceDataReferences>>;
+
+struct ModuleInterfaceDataReferences {
+    pub allocator: Arc<ModuleAllocator>,
+    pub resource_registry: Arc<ResourceRegistry>,
+    resource_handles: Vec<Arc<ResourceHandle>>,
+}
+
+impl ModuleInterfaceDataReferences {
+    pub fn new(
+        allocator: Arc<ModuleAllocator>,
+        resource_registry: Arc<ResourceRegistry>,
+    ) -> ModuleInterfaceDataReferences {
+        ModuleInterfaceDataReferences {
+            allocator,
+            resource_registry,
+            resource_handles: Vec::new(),
+        }
+    }
+
+    pub fn load_resource(&mut self, name: &str) -> Option<Arc<ResourceHandle>> {
+        if let Some(handle) = self.resource_registry.get(name) {
+            let handle = Arc::new(handle);
+            // Keep track of the handle
+            self.resource_handles.push(handle.clone());
+            return Some(handle);
+        }
+
+        None
     }
 }
 
-extern "C" fn load_resource(interface: *mut c_void, size: usize) -> *mut u8 {
-    let interface = interface as *mut PipelineInterface;
-    unsafe {
-        (*interface.allocator)
-            .alloc(size)
-            .unwrap_or(std::ptr::null_mut())
+// Actual C interface
+extern "C" fn alloc(data: *mut c_void, size: usize) -> *mut u8 {
+    let data = data as *mut ModuleInterfaceData;
+    let data = unsafe { (*data).lock() };
+    unsafe { data.allocator.alloc(size).unwrap_or(std::ptr::null_mut()) }
+}
+
+extern "C" fn load_resource(
+    data: *mut c_void,
+    name: *const c_char,
+    output: *mut *const u8,
+    output_size: *mut usize,
+) -> bool {
+    let name = unsafe { CStr::from_ptr(name).to_string_lossy() };
+    let data = data as *mut ModuleInterfaceData;
+    let mut data = unsafe { (*data).lock() };
+
+    let handle = data.load_resource(&*name);
+
+    if let Some(handle) = handle {
+        unsafe {
+            *output = handle.as_ptr().unwrap();
+            *output_size = handle.size().unwrap();
+        }
+        return true;
     }
+
+    false
 }
 
 pub type MetadataType = TypedReader<
@@ -113,7 +158,8 @@ impl Error for PipelineRunError {}
 pub struct Module {
     library: libloading::Library,
     allocator: Arc<ModuleAllocator>,
-    pub interface: PipelineInterface,
+    interface: Arc<PipelineInterface>,
+    interface_data: ModuleInterfaceData,
     metadata: Option<Mutex<MetadataType>>,
 }
 
@@ -150,12 +196,19 @@ impl Module {
         allocator: Arc<ModuleAllocator>,
         resource_registry: Arc<ResourceRegistry>,
         file_name: &Path,
-    ) -> Result<Module, Box<dyn Error>> {
+    ) -> Result<Arc<Module>, Box<dyn Error>> {
         let lib = libloading::Library::new(file_name)?;
-        let interface = PipelineInterface {
-            allocator: &*allocator as *const _ as *mut c_void,
+
+        let interface_data = Arc::new(Mutex::new(ModuleInterfaceDataReferences::new(
+            allocator.clone(),
+            resource_registry,
+        )));
+
+        let interface = Arc::new(PipelineInterface {
+            data: &*interface_data as *const _ as *mut _,
             alloc_fn: alloc,
-        };
+            load_resource_fn: load_resource,
+        });
 
         println!("if load {:?}", interface);
 
@@ -163,8 +216,11 @@ impl Module {
             library: lib,
             allocator,
             interface,
+            interface_data,
             metadata: None,
         };
+
+        module.call_init()?;
 
         // let metadata = module.call_info()?;
         // log_metadata(&metadata)?;
@@ -184,7 +240,7 @@ impl Module {
             unsafe { self.library.get(b"pipeline_init")? };
 
         info!("pipline_init");
-        let result = func(&self.interface);
+        let result = func(&*self.interface);
         info!("pipeline_init result: {}", result);
 
         if !result {

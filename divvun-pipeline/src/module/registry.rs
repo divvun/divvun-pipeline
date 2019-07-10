@@ -8,6 +8,7 @@ use std::sync::Arc;
 use parking_lot::RwLock;
 
 use super::{Module, ModuleAllocator};
+use crate::resources::ResourceRegistry;
 
 #[derive(Debug)]
 pub enum ModuleLoadError {
@@ -35,6 +36,7 @@ impl Error for ModuleLoadError {}
 /// and properly initializing them.
 pub struct ModuleRegistry {
     allocator: Arc<ModuleAllocator>,
+    resource_registry: Arc<ResourceRegistry>,
     search_paths: HashSet<PathBuf>,
     registry: RwLock<HashMap<String, Arc<Module>>>,
 }
@@ -42,7 +44,10 @@ pub struct ModuleRegistry {
 impl ModuleRegistry {
     /// Create a new module registry with the default search path of '{current_dir}/modules'
     /// and using the passed in allocator to initialize all modules loaded in the future
-    pub fn new(allocator: Arc<ModuleAllocator>) -> Result<ModuleRegistry, Box<dyn Error>> {
+    pub fn new(
+        allocator: Arc<ModuleAllocator>,
+        resource_registry: Arc<ResourceRegistry>,
+    ) -> Result<ModuleRegistry, Box<dyn Error>> {
         let mut search_paths = HashSet::new();
 
         // Add default search path
@@ -52,6 +57,7 @@ impl ModuleRegistry {
 
         Ok(ModuleRegistry {
             allocator,
+            resource_registry,
             search_paths,
             registry: RwLock::new(HashMap::new()),
         })
@@ -93,9 +99,11 @@ impl ModuleRegistry {
         let mut errors = Vec::new();
         for path in load_paths {
             info!("trying to load from {}", path.display());
-            //println!("trying to load from {}", path.display());
-            let module = Module::load(self.allocator.clone(), &path);
-
+            let module = Module::load(
+                self.allocator.clone(),
+                self.resource_registry.clone(),
+                &path,
+            );
             match module {
                 Ok(module) => {
                     // Note: It is important to call the init after the module in the ARc

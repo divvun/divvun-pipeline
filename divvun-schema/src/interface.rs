@@ -14,7 +14,7 @@ pub struct PipelineInterface {
     pub data: *mut c_void,
     pub alloc_fn: AllocFn,
     pub load_resource_fn: LoadResourceFn,
-    pub release_resource_fn: ReleaseResourceFn,
+    // pub release_resource_fn: ReleaseResourceFn,
 }
 
 impl Drop for PipelineInterface {
