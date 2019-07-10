@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use divvun_pipeline::module::*;
 use divvun_pipeline::pipeline::*;
-use divvun_pipeline::resources::ResourceRegistry;
+use divvun_pipeline::resources::{LoadableResource, Resource, ResourceRegistry};
 use divvun_schema::string_capnp::string;
 use divvun_schema::util;
 
@@ -11,7 +11,7 @@ mod common;
 
 #[test]
 fn load_run_module_memory() {
-    let (registry, allocator) = common::setup_test_registry(AllocationType::Memory);
+    let (registry, allocator, ..) = common::setup_test_registry(AllocationType::Memory);
 
     let mut module = registry.get_module("reverse_string").unwrap();
     let inputs: Vec<*const u8> = Vec::new();
@@ -27,7 +27,7 @@ fn load_run_module_memory() {
 
 #[test]
 fn load_run_module_file() {
-    let (registry, allocator) = common::setup_test_registry(AllocationType::File);
+    let (registry, allocator, ..) = common::setup_test_registry(AllocationType::File);
 
     let mut module = registry.get_module("reverse_string").unwrap();
     let inputs: Vec<*const u8> = Vec::new();
@@ -46,7 +46,7 @@ fn load_run_module_file() {
 
 #[test]
 fn load_run_input_reverse() {
-    let (registry, allocator) = common::setup_test_registry(AllocationType::Memory);
+    let (registry, allocator, ..) = common::setup_test_registry(AllocationType::Memory);
 
     let mut module = registry.get_module("reverse_string").unwrap();
 
@@ -77,36 +77,41 @@ fn load_run_input_reverse() {
     assert_eq!(text.get_string().unwrap(), "olleh");
 }
 
-// #[test]
-// fn load_run_input_reverse_resource() {
-//     let (registry, allocator) = common::setup_test_registry(AllocationType::Memory);
+#[test]
+fn load_run_input_reverse_resource() {
+    let (registry, allocator, resources) = common::setup_test_registry(AllocationType::Memory);
 
-//     let resource_registry = ResourceRegistry
-//     let mut module = registry.get_module("reverse_string").unwrap();
+    let my_data = "Hello".as_bytes();
+    resources.add_resource(
+        "lol",
+        LoadableResource::from(Resource::Bytes(my_data.to_owned())),
+    );
 
-//     let text = util::message_to_vec(divvun_schema::capnp_message!(string::Builder, builder => {
-//         builder.set_string("myfile");
-//     }))
-//     .unwrap();
+    let module = registry.get_module("reverse_string").unwrap();
 
-//     let inputs: Vec<*const u8> = vec![text.as_ptr()];
-//     let input_sizes: Vec<usize> = vec![text.len()];
+    let text = util::message_to_vec(divvun_schema::capnp_message!(string::Builder, builder => {
+        builder.set_string("lol");
+    }))
+    .unwrap();
 
-//     let result = module.call_init();
-//     assert!(result.is_ok());
-//     let result = module.call_run("reverse_resource", inputs, input_sizes);
-//     assert!(result.is_ok());
+    let inputs: Vec<*const u8> = vec![text.as_ptr()];
+    let input_sizes: Vec<usize> = vec![text.len()];
 
-//     let result = result.unwrap();
+    let result = module.call_init();
+    assert!(result.is_ok());
+    let result = module.call_run("reverse_resource", inputs, input_sizes);
+    assert!(result.is_ok());
 
-//     let slice = unsafe { std::slice::from_raw_parts(result.output, result.output_size) };
-//     let mut cursor = std::io::Cursor::new(slice);
+    let result = result.unwrap();
 
-//     let message =
-//         capnp::serialize::read_message(&mut cursor, capnp::message::ReaderOptions::new()).unwrap();
-//     let text = message
-//         .get_root::<divvun_schema::string_capnp::string::Reader>()
-//         .unwrap();
+    let slice = unsafe { std::slice::from_raw_parts(result.output, result.output_size) };
+    let mut cursor = std::io::Cursor::new(slice);
 
-//     assert_eq!(text.get_string().unwrap(), "olleh");
-// }
+    let message =
+        capnp::serialize::read_message(&mut cursor, capnp::message::ReaderOptions::new()).unwrap();
+    let text = message
+        .get_root::<divvun_schema::string_capnp::string::Reader>()
+        .unwrap();
+
+    assert_eq!(text.get_string().unwrap(), "olleh");
+}
