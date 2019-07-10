@@ -11,7 +11,10 @@ async fn pipeline_run_with_json() {
     env::set_var("RUST_LOG", "info");
     env_logger::init();
 
-    let file = File::open("pipeline.json").unwrap();
+    let path = env::current_dir().unwrap();
+    println!("The current directory is {}", path.display());
+
+    let file = File::open("tests/pipeline.json").unwrap();
     let reader = BufReader::new(file);
 
     let value: Value = serde_json::from_reader(reader).unwrap();
