@@ -28,6 +28,67 @@ macro_rules! capnp_error {
     }};
 }
 
+#[macro_export]
+macro_rules! module_metadata {
+    (@field $b:ident name $v:expr) => {
+        $b.set_module_name($v);
+    };
+
+    (@field $b:ident commands { $($ident:expr => [$($ip:ty),* $(,)*] => $op:ty),* $(,)* }) => {
+        let mut commands = $b.init_commands(module_metadata!(@count $($ident),*));
+        module_metadata!(@commands commands 0; $($ident => [$($ip),*] => $op),* ,);
+    };
+
+    // Count
+    (@count $i:tt, $($e:tt),*) => (
+        1 + module_metadata!(@count $($e),*)
+    );
+
+    (@count $i:tt) => (1);
+
+    // Commands
+    (@commands $c:ident $i:expr; $ident:expr => [$($ip:ty),*] => $op:ty, $($tail:tt)*) => (
+        {
+            use capnp::traits::HasTypeId;
+            let mut command = $c.reborrow().get($i);
+            command.set_name($ident);
+            command.set_output(<$op>::type_id());
+            let inputs = command.init_inputs(module_metadata!(@count $($ip),*));
+            {
+                module_metadata!(@inputs inputs 0; $($ip),* ,);
+            }
+        }
+        module_metadata!(@commands $c ($i+1); $($tail)*);
+    );
+
+    (@commands $c:ident $i:expr; ) => ();
+
+    // Inputs
+    (@inputs $c:ident $i:expr; $ip:ty, $($tail:tt)*) => (
+        {
+            $c.reborrow().set($i, <$ip>::type_id());
+        }
+        module_metadata!(@inputs inputs ($i+1); $($tail)*);
+    );
+
+    (@inputs $c:ident $i:expr; ) => ();
+
+    // Main
+    (
+        $(
+            $f:ident
+            :
+            $v:tt
+        ),* $(,)*
+    ) => {{
+        capnp_message!(divvun_schema::module_metadata_capnp::module_metadata::Builder, builder => {
+            $(
+                module_metadata!(@field builder $f $v);
+            )*
+        })
+    }};
+}
+
 pub fn read_message<T: for<'a> capnp::traits::Owned<'a>>(
     input: *const u8,
     input_size: usize,

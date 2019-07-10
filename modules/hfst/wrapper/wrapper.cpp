@@ -36,6 +36,7 @@ extern "C" std::stringstream *hfst_run(hfst_ol_tokenize::TokenizeSettings *setti
     hfst_ol_tokenize::process_input(container, input_stream, *output, *settings);
     output->seekg(0, output->end);
     *output_size = output->tellg();
+
     return output;
 }
 
