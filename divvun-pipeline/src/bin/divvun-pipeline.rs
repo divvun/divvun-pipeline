@@ -1,14 +1,16 @@
 #![feature(async_await)]
 
-use std::fs::{self, File};
-use std::io::{self, BufReader};
-use std::env;
-use std::path::{Path, PathBuf};
+use std::{
+    env,
+    fs::{self, File},
+    io::{self, BufReader},
+    path::{Path, PathBuf},
+};
 
-use zip::ZipArchive;
-use log::{info, error};
-use clap::{App, Arg, crate_version};
+use clap::{crate_version, App, Arg};
+use log::{error, info};
 use serde_json::Value;
+use zip::ZipArchive;
 
 use divvun_pipeline::{pipeline::Pipeline, run::run};
 
@@ -29,7 +31,10 @@ async fn main() {
         .about("Asynchronous parallel pipeline for text processing.")
         .arg(
             Arg::with_name(pipeline)
-                .help(&format!("The .{} file with the requested pipeline flow and required resources", PIPELINE_EXTENSION))
+                .help(&format!(
+                    "The .{} file with the requested pipeline flow and required resources",
+                    PIPELINE_EXTENSION
+                ))
                 .index(1),
         )
         .get_matches();
@@ -40,15 +45,19 @@ async fn main() {
 
         let pipeline_file = Path::new(pipeline_file);
 
-        if !pipeline_file.is_file() || (pipeline_file.extension().is_none() || pipeline_file.extension().unwrap() != PIPELINE_EXTENSION) {
-            error!("The supplied argument must be a valid file with the .{} extension", PIPELINE_EXTENSION);
+        if !pipeline_file.is_file()
+            || (pipeline_file.extension().is_none()
+                || pipeline_file.extension().unwrap() != PIPELINE_EXTENSION)
+        {
+            error!(
+                "The supplied argument must be a valid file with the .{} extension",
+                PIPELINE_EXTENSION
+            );
             return;
         }
 
         let file_stem = match pipeline_file.file_stem() {
-            Some(file_stem) => {
-                file_stem
-            },
+            Some(file_stem) => file_stem,
             None => {
                 error!("Invalid file supplied: {}", pipeline_file.display());
                 return;
@@ -62,7 +71,7 @@ async fn main() {
 
                 fs::create_dir_all(&new_parent).unwrap();
                 Some(new_parent)
-            },
+            }
             None => None,
         };
 
@@ -72,10 +81,10 @@ async fn main() {
 
         info!("File count: {}", archive.len());
 
-        let mut json_file= PathBuf::default();
+        let mut json_file = PathBuf::default();
         let mut destination_dir = PathBuf::default();
 
-        for i in 0 .. archive.len() {
+        for i in 0..archive.len() {
             let mut file = archive.by_index(i).unwrap();
             let filename = file.sanitized_name();
             let ext = filename.extension().unwrap();

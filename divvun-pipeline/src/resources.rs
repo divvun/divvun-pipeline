@@ -1,9 +1,6 @@
 use log::info;
 use memmap::{Mmap, MmapOptions};
-use std::{
-    ops::Deref,
-    sync::atomic::{AtomicUsize, Ordering},
-};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use std::sync::Arc;
 

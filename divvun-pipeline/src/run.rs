@@ -1,14 +1,4 @@
-use std::{
-    env,
-    fs::File,
-    io::{BufReader, Cursor},
-    path::Path,
-    sync::Arc,
-};
-
-use clap::{crate_version, App, Arg};
-use log::info;
-use serde_json::Value;
+use std::{io::Cursor, path::Path, sync::Arc};
 
 use crate::{
     module::{AllocationType, ModuleAllocator, ModuleRegistry},
