@@ -119,22 +119,25 @@ impl Drop for ResourceHandle {
 }
 
 pub struct ResourceRegistry {
-    available: HashMap<String, Arc<LoadableResource>>,
+    available: RwLock<HashMap<String, Arc<LoadableResource>>>,
 }
 
 impl ResourceRegistry {
     pub fn new() -> ResourceRegistry {
         ResourceRegistry {
-            available: HashMap::new(),
+            available: RwLock::new(HashMap::new()),
         }
     }
 
-    pub fn add_resource(&mut self, name: &str, resource: LoadableResource) {
-        self.available.insert(name.to_string(), Arc::new(resource));
+    pub fn add_resource(&self, name: &str, resource: LoadableResource) {
+        self.available
+            .write()
+            .insert(name.to_string(), Arc::new(resource));
     }
 
     pub fn get(&self, name: &str) -> Option<ResourceHandle> {
-        let resource = self.available.get(name)?;
+        let lock = self.available.read();
+        let resource = lock.get(name)?;
         resource.claim();
         Some(ResourceHandle {
             loadable_resource: resource.clone(),
@@ -143,6 +146,7 @@ impl ResourceRegistry {
 
     pub fn loaded_resources_count(&self) -> usize {
         self.available
+            .read()
             .values()
             .filter(|res| res.is_loaded())
             .count()
