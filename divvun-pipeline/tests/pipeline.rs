@@ -1,31 +1,19 @@
 #![feature(async_await)]
 
-use std::{env, fs::File, io::BufReader};
+use std::env;
+use std::fs;
 
-use serde_json::Value;
-
-use divvun_pipeline::{pipeline::Pipeline, run::run};
+use divvun_pipeline::{run::run, file::load_pipeline_file};
 
 #[runtime::test]
-async fn pipeline_run_with_json() {
+async fn pipeline_run_with_zpipe() {
     env::set_var("RUST_LOG", "info");
     env_logger::init();
 
-    let path = env::current_dir().unwrap();
-    println!("The current directory is {}", path.display());
+    let pipeline = load_pipeline_file("tests/pipeline.zpipe").unwrap();
+    let output = run(&pipeline).await;
 
-    let file = File::open("tests/pipeline.json").unwrap();
-    let reader = BufReader::new(file);
+    assert_eq!("EREH ENOD SNOITATUPMOC GIB AHello world!", output);
 
-    let value: Value = serde_json::from_reader(reader).unwrap();
-
-    let json_str = serde_json::to_string(&value).unwrap();
-
-    let pipeline: Pipeline = Pipeline {
-        root: serde_json::from_str(&json_str).unwrap(),
-    };
-
-    let result = run(&pipeline).await;
-
-    assert_eq!("EREH ENOD SNOITATUPMOC GIB AHello world!", result);
+    fs::remove_dir_all("tests/pipeline").expect("failed to remove test pipeline directory");
 }
