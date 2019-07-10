@@ -13,6 +13,10 @@ crate-type = ["rlib", "staticlib", "cdylib"]
 name = "divvun-pipeline"
 path = "src/bin/divvun-pipeline.rs"
 
+[[bin]]
+name = "zinput-convert"
+path = "src/bin/zinput-convert.rs"
+
 [dependencies]
 libloading = "0.5.1"
 memmap = "0.7.0"
