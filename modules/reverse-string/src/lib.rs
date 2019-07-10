@@ -78,6 +78,21 @@ pub extern "C" fn pipeline_run(
             let string = message.get().unwrap();
             let resource = string.get_string().unwrap();
             println!("loading resource {}", resource);
+            let res = interface::load_resource(resource).unwrap();
+            println!("res {:?}", res);
+
+            let string = String::from_utf8_lossy(res.as_slice());
+            let result: String = string.chars().rev().collect();
+            println!("receives input {}, returning {}", string, result);
+
+            util::output_message(
+                output,
+                output_size,
+                capnp_message!(string::Builder, builder => {
+                    builder.set_string(&result);
+                }),
+            )
+            .unwrap();
 
             true
         }

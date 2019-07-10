@@ -182,7 +182,6 @@ mod tests {
         let input_sizes: Vec<usize> = Vec::new();
 
         println!("calling init");
-        let result = module.call_init();
         let result = module.call_run("reverse", inputs, input_sizes);
         println!("result {:?}", result);
         println!("Hello, world!");

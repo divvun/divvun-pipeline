@@ -29,31 +29,29 @@ type PipelineRunFn = fn(
 type PipelinInitFn = fn(*const PipelineInterface) -> bool;
 type PipelinInfoFn = fn(*mut *const u8, *mut usize) -> bool;
 
-type ModuleInterfaceData = Arc<Mutex<ModuleInterfaceDataReferences>>;
-
-struct ModuleInterfaceDataReferences {
+struct ModuleInterfaceData {
     pub allocator: Arc<ModuleAllocator>,
     pub resource_registry: Arc<ResourceRegistry>,
-    resource_handles: Vec<Arc<ResourceHandle>>,
+    resource_handles: Mutex<Vec<Arc<ResourceHandle>>>,
 }
 
-impl ModuleInterfaceDataReferences {
+impl ModuleInterfaceData {
     pub fn new(
         allocator: Arc<ModuleAllocator>,
         resource_registry: Arc<ResourceRegistry>,
-    ) -> ModuleInterfaceDataReferences {
-        ModuleInterfaceDataReferences {
+    ) -> ModuleInterfaceData {
+        ModuleInterfaceData {
             allocator,
             resource_registry,
-            resource_handles: Vec::new(),
+            resource_handles: Mutex::new(Vec::new()),
         }
     }
 
-    pub fn load_resource(&mut self, name: &str) -> Option<Arc<ResourceHandle>> {
+    pub fn load_resource(&self, name: &str) -> Option<Arc<ResourceHandle>> {
         if let Some(handle) = self.resource_registry.get(name) {
             let handle = Arc::new(handle);
             // Keep track of the handle
-            self.resource_handles.push(handle.clone());
+            self.resource_handles.lock().push(handle.clone());
             return Some(handle);
         }
 
@@ -64,8 +62,20 @@ impl ModuleInterfaceDataReferences {
 // Actual C interface
 extern "C" fn alloc(data: *mut c_void, size: usize) -> *mut u8 {
     let data = data as *mut ModuleInterfaceData;
-    let data = unsafe { (*data).lock() };
-    unsafe { data.allocator.alloc(size).unwrap_or(std::ptr::null_mut()) }
+    unsafe {
+        println!("ALLOC ON RUST: {:?}", data);
+        println!(
+            "ALLOC ON RUST allocator: {:?}",
+            &*(*data).allocator as *const _
+        );
+    }
+    // let data = unsafe { (*data).lock() };
+    unsafe {
+        (*data)
+            .allocator
+            .alloc(size)
+            .unwrap_or(std::ptr::null_mut())
+    }
 }
 
 extern "C" fn load_resource(
@@ -76,9 +86,9 @@ extern "C" fn load_resource(
 ) -> bool {
     let name = unsafe { CStr::from_ptr(name).to_string_lossy() };
     let data = data as *mut ModuleInterfaceData;
-    let mut data = unsafe { (*data).lock() };
+    // let mut data = unsafe { (*data).lock() };
 
-    let handle = data.load_resource(&*name);
+    let handle = unsafe { (*data).load_resource(&*name) };
 
     if let Some(handle) = handle {
         unsafe {
@@ -159,7 +169,7 @@ pub struct Module {
     library: libloading::Library,
     allocator: Arc<ModuleAllocator>,
     interface: Arc<PipelineInterface>,
-    interface_data: ModuleInterfaceData,
+    interface_data: Arc<ModuleInterfaceData>,
     metadata: Option<Mutex<MetadataType>>,
 }
 
@@ -199,15 +209,24 @@ impl Module {
     ) -> Result<Arc<Module>, Box<dyn Error>> {
         let lib = libloading::Library::new(file_name)?;
 
-        let interface_data = Arc::new(Mutex::new(ModuleInterfaceDataReferences::new(
+        println!("allocator A {:?}", &*allocator as *const _);
+        let interface_data = Arc::new(ModuleInterfaceData::new(
             allocator.clone(),
             resource_registry,
-        )));
+        ));
+
+        println!("interface_data B {:?}", &*interface_data as *const _);
+        println!("allocator B {:?}", &*interface_data.allocator as *const _);
 
         let interface = Arc::new(PipelineInterface {
             data: &*interface_data as *const _ as *mut _,
             alloc_fn: alloc,
             load_resource_fn: load_resource,
+        });
+
+        println!("interface_data C {:?}", interface.data);
+        println!("allocator C {:?}", unsafe {
+            &*(*(interface.data as *const ModuleInterfaceData)).allocator as *const _
         });
 
         println!("if load {:?}", interface);
@@ -235,11 +254,12 @@ impl Module {
         &self.metadata
     }
 
-    pub fn call_init(&self) -> Result<(), Box<dyn Error>> {
+    fn call_init(&self) -> Result<(), Box<dyn Error>> {
         let func: libloading::Symbol<PipelinInitFn> =
             unsafe { self.library.get(b"pipeline_init")? };
 
         info!("pipline_init");
+        info!("init ptr {:?}", &*self.interface as *const _);
         let result = func(&*self.interface);
         info!("pipeline_init result: {}", result);
 
@@ -250,7 +270,7 @@ impl Module {
         Ok(())
     }
 
-    pub fn call_info(&self) -> Result<MetadataType, Box<dyn Error>> {
+    fn call_info(&self) -> Result<MetadataType, Box<dyn Error>> {
         let func: libloading::Symbol<PipelinInfoFn> =
             unsafe { self.library.get(b"pipeline_info")? };
 

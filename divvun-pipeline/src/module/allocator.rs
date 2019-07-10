@@ -28,6 +28,7 @@ impl ModuleAllocator {
     }
 
     pub fn total_size(&self) -> usize {
+        info!("total size");
         self.mmaps.read().iter().map(|m| m.len()).sum()
     }
 
@@ -43,7 +44,9 @@ impl ModuleAllocator {
         }?;
 
         let ptr = mmap.as_mut_ptr();
+        info!("allocated to {:?} {}", ptr, self.total_size());
         self.mmaps.write().push(mmap);
+        info!("done");
         Ok(ptr)
     }
 }

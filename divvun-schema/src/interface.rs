@@ -51,14 +51,35 @@ impl PipelineInterface {
     }
 }
 
+#[derive(Debug)]
 pub struct PipelineResource {
-    pub name: String,
-    pub data: *const u8,
-    pub data_size: usize,
+    name: String,
+    data: *const u8,
+    data_size: usize,
+}
+
+impl PipelineResource {
+    pub fn name(&self) -> &String {
+        &self.name
+    }
+
+    pub fn as_ptr(&self) -> *const u8 {
+        self.data
+    }
+
+    pub fn size(&self) -> usize {
+        self.data_size
+    }
+
+    pub fn as_slice(&self) -> &[u8] {
+        unsafe { std::slice::from_raw_parts(self.data, self.data_size) }
+    }
 }
 
 impl Drop for PipelineResource {
-    fn drop(&mut self) {}
+    fn drop(&mut self) {
+        // TODO: release
+    }
 }
 
 pub static mut PIPELINE_INTERFACE: Option<*const PipelineInterface> = None;
@@ -69,8 +90,8 @@ pub fn allocate(size: usize) -> Option<*mut u8> {
         if let Some(interface) = PIPELINE_INTERFACE {
             println!(
                 "interface {:?} {:?} size {}",
-                std::thread::current().id(),
                 interface,
+                (*interface).data,
                 size
             );
             (*interface).alloc(size)
@@ -83,13 +104,7 @@ pub fn allocate(size: usize) -> Option<*mut u8> {
 /// To be called by the pipeline module's pipeline_init function to initialize the SDK
 pub fn initialize(interface: *const PipelineInterface) -> bool {
     unsafe {
-        println!(
-            "initialize {:?} {:?} {:?} {:?}",
-            std::thread::current().id(),
-            interface,
-            (*interface).data,
-            (*interface).alloc_fn
-        );
+        println!("initialize {:?} {:?}", interface, (*interface).data,);
         PIPELINE_INTERFACE = Some(interface);
     }
     true
