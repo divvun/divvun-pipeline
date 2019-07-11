@@ -27,3 +27,8 @@ On Linux:
 On Windows:
 
 Exercise for the reader, but probably modify one of the other files to refer to `.dll` files.
+
+# Hfst Module
+See modules/hfst/README.md about getting the latest hfst binaries to compile. Get the se.zcheck file from somewhere and extract to the folder se_zcheck.
+
+Unignore the test in divvun-pipeline/tests/hfst.rs and run that after compiling & copying everything with ./test.sh
