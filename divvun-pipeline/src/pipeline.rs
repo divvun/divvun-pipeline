@@ -1,4 +1,5 @@
 use futures::future::join_all;
+use log::info;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -18,6 +19,7 @@ pub struct Pipeline {
 pub struct PipelineCommand {
     pub module: String,
     pub command: String,
+    pub parameters: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -145,8 +147,15 @@ fn process_single(
         size_vec.push(data.size);
     });
 
+    info!("params: {:?}", command.parameters);
+
     let output = module
-        .call_run(&command.command, ptr_vec, size_vec)
+        .call_run(
+            &command.command,
+            command.parameters.as_ref(),
+            ptr_vec,
+            size_vec,
+        )
         .unwrap();
 
     Ok(Arc::new(vec![Arc::new(PipelineData {

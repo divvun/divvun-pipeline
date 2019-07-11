@@ -163,7 +163,7 @@ mod tests {
 
         assert_eq!(registry.loaded_resources_count(), 0);
         {
-            let resource = registry.get("lol").unwrap();
+            let resource = registry.get("lol").expect("resource");
             assert_eq!(resource.size().unwrap(), 5);
             assert_eq!(registry.loaded_resources_count(), 1);
         }

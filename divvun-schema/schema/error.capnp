@@ -7,6 +7,7 @@ struct PipelineError {
         sequenceError @2;
         moduleError @3;
         invalidInput @4;
+        invalidParameters @5;
     }
 
     kind @0 :ErrorKind;

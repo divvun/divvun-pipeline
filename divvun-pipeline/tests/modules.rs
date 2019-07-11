@@ -17,7 +17,7 @@ fn load_run_module_memory() {
     let inputs: Vec<*const u8> = Vec::new();
     let input_sizes: Vec<usize> = Vec::new();
 
-    let result = module.call_run("reverse", inputs, input_sizes);
+    let result = module.call_run("reverse", None, inputs, input_sizes);
     assert!(result.is_err());
 
     assert_eq!(allocator.total_size(), 64);
@@ -31,7 +31,7 @@ fn load_run_module_file() {
     let inputs: Vec<*const u8> = Vec::new();
     let input_sizes: Vec<usize> = Vec::new();
 
-    let result = module.call_run("reverse", inputs, input_sizes);
+    let result = module.call_run("reverse", None, inputs, input_sizes);
     assert!(result.is_err());
     // println!(
     //     "{}",
@@ -54,7 +54,7 @@ fn load_run_input_reverse() {
     let inputs: Vec<*const u8> = vec![text.as_ptr()];
     let input_sizes: Vec<usize> = vec![text.len()];
 
-    let result = module.call_run("reverse", inputs, input_sizes);
+    let result = module.call_run("reverse", None, inputs, input_sizes);
     assert!(result.is_ok());
 
     let result = result.unwrap();
@@ -88,10 +88,11 @@ fn load_run_input_reverse_resource() {
     }))
     .unwrap();
 
-    let inputs: Vec<*const u8> = vec![text.as_ptr()];
-    let input_sizes: Vec<usize> = vec![text.len()];
+    let inputs: Vec<*const u8> = vec![];
+    let input_sizes: Vec<usize> = vec![];
 
-    let result = module.call_run("reverse_resource", inputs, input_sizes);
+    let parameters = vec!["lol".to_string()];
+    let result = module.call_run("reverse_resource", Some(&parameters), inputs, input_sizes);
     assert!(result.is_ok());
 
     let result = result.unwrap();

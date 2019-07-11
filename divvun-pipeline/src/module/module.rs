@@ -18,6 +18,8 @@ use crate::resources::{ResourceHandle, ResourceRegistry};
 
 type PipelineRunFn = fn(
     command: *const c_char,
+    parameters: *const *const c_char,
+    parameter_count: usize,
     input_count: usize,
     input: *const *const u8,
     input_sizes: *const usize,
@@ -287,6 +289,7 @@ impl Module {
     pub fn call_run(
         &self,
         command: &str,
+        parameters: Option<&Vec<String>>,
         input: Vec<*const u8>,
         input_sizes: Vec<usize>,
     ) -> Result<PipelineRunResult, Box<dyn Error>> {
@@ -295,8 +298,23 @@ impl Module {
         let command = CString::new(command)?;
         let mut output: *const u8 = std::ptr::null();
         let mut output_size: usize = 0;
+
+        let parameters = parameters
+            .map(|parameters| {
+                parameters
+                    .iter()
+                    .map(|p| CString::new(&**p).expect("valid parameter"))
+                    .collect::<Vec<CString>>()
+            })
+            .unwrap_or_else(|| vec![]);;
+
+        let parameter_ptr: Vec<*const c_char> =
+            parameters.iter().map(|p| p.as_ptr()).collect::<Vec<_>>();
+
         let result = func(
             command.as_ptr(),
+            parameter_ptr.as_ptr(),
+            parameter_ptr.len(),
             input.len(),
             input.as_ptr(),
             input_sizes.as_ptr(),

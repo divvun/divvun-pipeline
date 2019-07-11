@@ -18,6 +18,8 @@ pub extern "C" fn pipeline_init(interface: *const PipelineInterface) -> bool {
 #[no_mangle]
 pub extern "C" fn pipeline_run(
     command: *const c_char,
+    parameters: *const *const c_char,
+    parameter_count: usize,
     input_count: usize,
     input: *const *const u8,
     input_sizes: *const usize,
@@ -26,23 +28,15 @@ pub extern "C" fn pipeline_run(
 ) -> bool {
     println!("Hello, world from module!");
     let command = unsafe { CStr::from_ptr(command) }.to_string_lossy();
-    println!("command = {}, input_count = {}", command, input_count);
+    println!(
+        "command = {}, input_count = {}, parameter_count = {}",
+        command, input_count, parameter_count
+    );
 
     let input_sizes = unsafe { std::slice::from_raw_parts(input_sizes, input_count) };
     let input = unsafe { std::slice::from_raw_parts(input, input_count) };
 
-    if input.len() == 0 {
-        util::output_message(
-            output,
-            output_size,
-            divvun_schema::capnp_error!(
-                divvun_schema::error_capnp::pipeline_error::ErrorKind::ModuleError,
-                "no input provided"
-            ),
-        )
-        .unwrap();
-        return false;
-    }
+    let parameters = unsafe { std::slice::from_raw_parts(parameters, parameter_count) };
 
     match &*command {
         "reverse" => {
@@ -71,14 +65,35 @@ pub extern "C" fn pipeline_run(
                 return true;
             }
 
+            util::output_message(
+                output,
+                output_size,
+                divvun_schema::capnp_error!(
+                    divvun_schema::error_capnp::pipeline_error::ErrorKind::ModuleError,
+                    "no input provided"
+                ),
+            )
+            .unwrap();
+
             false
         }
         "reverse_resource" => {
-            let message = util::read_message::<string::Owned>(input[0], input_sizes[0]).unwrap();
-            let string = message.get().unwrap();
-            let resource = string.get_string().unwrap();
-            println!("loading resource {}", resource);
-            let res = interface::load_resource(resource).unwrap();
+            if parameter_count == 0 {
+                util::output_message(
+                    output,
+                    output_size,
+                    divvun_schema::capnp_error!(
+                        divvun_schema::error_capnp::pipeline_error::ErrorKind::InvalidParameters,
+                        "resource name parameter required"
+                    ),
+                )
+                .unwrap();
+                return false;
+            }
+
+            let resource_name = unsafe { CStr::from_ptr(parameters[0]).to_string_lossy() };
+            println!("loading resource {}", resource_name);
+            let res = interface::load_resource(&*resource_name).expect("resource");
             println!("res {:?}", res);
 
             let string = String::from_utf8_lossy(res.as_slice());

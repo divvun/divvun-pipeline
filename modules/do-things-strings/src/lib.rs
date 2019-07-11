@@ -19,6 +19,8 @@ pub extern "C" fn pipeline_init(interface: *const PipelineInterface) -> bool {
 #[no_mangle]
 extern "C" fn pipeline_run(
     command: *const c_char,
+    parameters: *const *const c_char,
+    parameter_count: usize,
     input_count: usize,
     input: *const *const u8,
     input_sizes: *const usize,
