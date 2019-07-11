@@ -1,5 +1,6 @@
 use std::{
-    ffi::CString,
+    borrow::Cow,
+    ffi::{CStr, CString},
     os::raw::{c_char, c_void},
 };
 
@@ -31,6 +32,38 @@ pub struct ModuleRunParameters {
     pub input_sizes: *const usize,
     pub output: *mut *const u8,
     pub output_size: *mut usize,
+}
+
+impl ModuleRunParameters {
+    pub fn command(&self) -> String {
+        unsafe { CStr::from_ptr(self.command) }
+            .to_string_lossy()
+            .to_string()
+    }
+
+    pub fn input_sizes(&self) -> &[usize] {
+        unsafe { std::slice::from_raw_parts(self.input_sizes, self.input_count) }
+    }
+
+    pub fn input(&self) -> &[*const u8] {
+        unsafe { std::slice::from_raw_parts(self.input, self.input_count) }
+    }
+
+    pub fn get_input(&self, i: usize) -> *const u8 {
+        self.input()[i]
+    }
+
+    pub fn get_input_size(&self, i: usize) -> usize {
+        self.input_sizes()[i]
+    }
+
+    pub fn parameters(&self) -> &[*const c_char] {
+        unsafe { std::slice::from_raw_parts(self.parameters, self.parameter_count) }
+    }
+
+    pub fn get_parameter(&self, i: usize) -> Cow<str> {
+        unsafe { CStr::from_ptr(self.parameters()[i]) }.to_string_lossy()
+    }
 }
 
 impl PipelineInterface {

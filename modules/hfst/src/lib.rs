@@ -7,7 +7,7 @@ use divvun_schema::{
     util,
 };
 use lazy_static::lazy_static;
-use std::{ffi::CStr, io::Cursor, os::raw::c_char};
+use std::{ffi::CStr, io::Cursor, os::raw::c_char, str};
 mod bindings;
 use std::ffi::c_void;
 
@@ -33,10 +33,10 @@ pub extern "C" fn pipeline_init(interface: *const PipelineInterface) -> bool {
 #[no_mangle]
 pub extern "C" fn pipeline_run(p: *const ModuleRunParameters) -> bool {
     let p = unsafe { &*p };
-    let command = unsafe { CStr::from_ptr(p.command) }.to_string_lossy();
+    let command = p.command();
 
-    let input_sizes = unsafe { std::slice::from_raw_parts(p.input_sizes, p.input_count) };
-    let input = unsafe { std::slice::from_raw_parts(p.input, p.input_count) };
+    let input_sizes = p.input_sizes();
+    let input = p.input();
 
     if input.len() == 0 {
         util::output_message(
@@ -53,11 +53,11 @@ pub extern "C" fn pipeline_run(p: *const ModuleRunParameters) -> bool {
 
     match &*command {
         "tokenize" => {
-            for i in 0..p.input_count {
+            for i in 0..input.len() {
                 let message =
-                    util::read_message::<string::Owned>(input[i], input_sizes[i]).unwrap();
-                let string = message.get().unwrap();
-                let result: String = string.get_string().unwrap().chars().rev().collect();
+                    util::read_message::<string::Owned>(p.get_input(i), p.get_input_size(i))
+                        .unwrap();
+                let input_data = message.get().unwrap().get_string().unwrap();
 
                 // do hfst tokenize
                 let settings = bindings::hfst_ol_tokenize_TokenizeSettings {
@@ -74,41 +74,53 @@ pub extern "C" fn pipeline_run(p: *const ModuleRunParameters) -> bool {
                     weight_cutoff: -1.0,
                 };
 
-                // println!("hfst input: {}", String::from_utf8_lossy(input_data));
-                // let mut output_size: usize = 0;
-                // let stream = unsafe {
-                //     hfst_run(
-                //         &settings,
-                //         pmatch.as_ptr(),
-                //         pmatch.len(),
-                //         input_data.as_ptr(),
-                //         input_data.len(),
-                //         &mut output_size,
-                //     )
-                // };
+                let pmatch_resource = p.get_parameter(0);
+                let pmatch = interface::load_resource(&*pmatch_resource)
+                    .expect("pmatch resource doesn't exist");
 
-                // println!("output size: {}", output_size);
+                let mut output_size: usize = 0;
+                // hfst_run runs the hfst tokenizer and writes into a std::stringstream
+                // If we want to avoid the copying here, we have to make a custom STL allocator in C++
+                // to use our allocator, and then get a pointer to that buffer back instead :)
+                let stream = unsafe {
+                    hfst_run(
+                        &settings,
+                        pmatch.as_ptr(),
+                        pmatch.size(),
+                        input_data.as_ptr(),
+                        input_data.len(),
+                        &mut output_size,
+                    )
+                };
 
-                // let mut output = vec![0u8; output_size];
-                // unsafe {
-                //     hfst_copy_output(stream, output.as_mut_ptr(), output.len());
-                // }
+                println!("output size: {}", output_size);
 
-                // let output = String::from_utf8_lossy(&output);
-                // println!("hfst output: {}", output);
+                // When we have a interface deallocate function we can use our allocation system to
+                // allocate the temporary buffer.
+                // let mut output = interface::allocate(output_size).expect("failed to allocate");
+                let mut output = vec![0u8; output_size];
+                unsafe {
+                    hfst_copy_output(stream, output.as_mut_ptr(), output_size);
+                }
 
-                // unsafe {
-                //     hfst_free(stream);
-                // }
+                unsafe {
+                    hfst_free(stream);
+                }
 
-                // util::output_message(
-                //     output,
-                //     output_size,
-                //     capnp_message!(string::Builder, builder => {
-                //         builder.set_string(&result);
-                //     }),
-                // )
-                // .unwrap();
+                util::output_message(
+                    p.output,
+                    p.output_size,
+                    capnp_message!(string::Builder, builder => {
+                        // This copies the string from our buffer into a buffer allocated by capnp
+                        // Ideally we override the capnp allocator to use our allocator
+                        // and at the same time use hfst_copy_output to write directly into
+                        // our allocated buffer.
+                        // This /should/ be possible through capnp's internal functions
+                        // init_text_pointer / set_text_pointer are the relevant functions
+                        builder.set_string(unsafe { str::from_utf8_unchecked(std::slice::from_raw_parts(output.as_ptr(), output_size))});
+                    })
+                )
+                .unwrap();
 
                 println!("returning from reverse");
 

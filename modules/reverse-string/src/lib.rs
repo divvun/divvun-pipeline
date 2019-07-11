@@ -18,19 +18,21 @@ pub extern "C" fn pipeline_init(interface: *const PipelineInterface) -> bool {
 #[no_mangle]
 pub extern "C" fn pipeline_run(p: *const ModuleRunParameters) -> bool {
     let p = unsafe { &*p };
+    let command = p.command();
     println!("Hello, world from module!");
-    let command = unsafe { CStr::from_ptr(p.command) }.to_string_lossy();
     println!(
         "command = {}, input_count = {}, parameter_count = {}",
-        command, p.input_count, p.parameter_count
+        p.command(),
+        p.input_count,
+        p.parameter_count
     );
 
-    let input_sizes = unsafe { std::slice::from_raw_parts(p.input_sizes, p.input_count) };
-    let input = unsafe { std::slice::from_raw_parts(p.input, p.input_count) };
+    let input_sizes = p.input_sizes();
+    let input = p.input();
 
-    let parameters = unsafe { std::slice::from_raw_parts(p.parameters, p.parameter_count) };
+    let parameters = p.parameters();
 
-    match &*command {
+    match &*p.command() {
         "reverse" => {
             for i in 0..p.input_count {
                 let message =

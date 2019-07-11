@@ -4,7 +4,11 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use std::sync::Arc;
 
-use std::{error::Error, fs::File, path::PathBuf};
+use std::{
+    error::Error,
+    fs::File,
+    path::{Path, PathBuf},
+};
 
 use parking_lot::RwLock;
 use std::collections::HashMap;
@@ -15,6 +19,13 @@ pub enum Resource {
 }
 
 impl Resource {
+    pub fn new_file(path: &Path) -> Resource {
+        Resource::File {
+            path: path.to_owned(),
+            mmap: None,
+        }
+    }
+
     pub fn load(&mut self) -> Result<(), Box<dyn Error>> {
         info!("load");
         match self {

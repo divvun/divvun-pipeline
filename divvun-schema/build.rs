@@ -20,8 +20,7 @@ fn main() {
 
             writeln!(
                 schema_file,
-                r#"#[doc(hidden)]
-pub mod {file_name} {{
+                r#"pub mod {file_name} {{
     include!(concat!(env!("OUT_DIR"), "/{file_name}.rs"));
 }}"#,
                 file_name = capnp_name
