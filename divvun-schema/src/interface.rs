@@ -20,6 +20,19 @@ pub struct PipelineInterface {
 unsafe impl Send for PipelineInterface {}
 unsafe impl Sync for PipelineInterface {}
 
+#[derive(Debug)]
+#[repr(C)]
+pub struct ModuleRunParameters {
+    pub command: *const c_char,
+    pub parameters: *const *const c_char,
+    pub parameter_count: usize,
+    pub input_count: usize,
+    pub input: *const *const u8,
+    pub input_sizes: *const usize,
+    pub output: *mut *const u8,
+    pub output_size: *mut usize,
+}
+
 impl PipelineInterface {
     pub fn alloc(&self, size: usize) -> Option<*mut u8> {
         let result = (self.alloc_fn)(self.data, size);

@@ -1,5 +1,8 @@
 use capnp::message::TypedReader;
-use divvun_schema::{error_capnp::pipeline_error, interface::PipelineInterface};
+use divvun_schema::{
+    error_capnp::pipeline_error,
+    interface::{ModuleRunParameters, PipelineInterface},
+};
 use std::{ffi::CStr, fmt};
 
 use log::{error, info};
@@ -16,16 +19,7 @@ use std::{
 use super::ModuleAllocator;
 use crate::resources::{ResourceHandle, ResourceRegistry};
 
-type PipelineRunFn = fn(
-    command: *const c_char,
-    parameters: *const *const c_char,
-    parameter_count: usize,
-    input_count: usize,
-    input: *const *const u8,
-    input_sizes: *const usize,
-    output: *mut *const u8,
-    output_size: *mut usize,
-) -> bool;
+type PipelineRunFn = fn(*const ModuleRunParameters) -> bool;
 
 type PipelinInitFn = fn(*const PipelineInterface) -> bool;
 type PipelinInfoFn = fn(*mut *const u8, *mut usize) -> bool;
@@ -311,16 +305,18 @@ impl Module {
         let parameter_ptr: Vec<*const c_char> =
             parameters.iter().map(|p| p.as_ptr()).collect::<Vec<_>>();
 
-        let result = func(
-            command.as_ptr(),
-            parameter_ptr.as_ptr(),
-            parameter_ptr.len(),
-            input.len(),
-            input.as_ptr(),
-            input_sizes.as_ptr(),
-            &mut output,
-            &mut output_size,
-        );
+        let parameters = ModuleRunParameters {
+            command: command.as_ptr(),
+            parameters: parameter_ptr.as_ptr(),
+            parameter_count: parameter_ptr.len(),
+            input: input.as_ptr(),
+            input_count: input.len(),
+            input_sizes: input_sizes.as_ptr(),
+            output: &mut output,
+            output_size: &mut output_size,
+        };
+
+        let result = func(&parameters);
 
         info!("result = {} output size = {}", result, output_size);
         if !result {

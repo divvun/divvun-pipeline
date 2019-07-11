@@ -3,7 +3,7 @@
 use capnp::{message::ReaderOptions, serialize};
 use divvun_schema::{
     capnp_message,
-    interface::{self, PipelineInterface},
+    interface::{self, ModuleRunParameters, PipelineInterface},
     module_metadata,
     string_capnp::string,
     util,
@@ -17,26 +17,18 @@ pub extern "C" fn pipeline_init(interface: *const PipelineInterface) -> bool {
 }
 
 #[no_mangle]
-extern "C" fn pipeline_run(
-    command: *const c_char,
-    parameters: *const *const c_char,
-    parameter_count: usize,
-    input_count: usize,
-    input: *const *const u8,
-    input_sizes: *const usize,
-    output: *mut *const u8,
-    output_size: *mut usize,
-) -> bool {
-    let command = unsafe { CStr::from_ptr(command) }.to_string_lossy();
-    let input_sizes = unsafe { std::slice::from_raw_parts(input_sizes, input_count) };
-    let input = unsafe { std::slice::from_raw_parts(input, input_count) };
+pub extern "C" fn pipeline_run(p: *const ModuleRunParameters) -> bool {
+    let p = unsafe { &*p };
+    let command = unsafe { CStr::from_ptr(p.command) }.to_string_lossy();
+    let input_sizes = unsafe { std::slice::from_raw_parts(p.input_sizes, p.input_count) };
+    let input = unsafe { std::slice::from_raw_parts(p.input, p.input_count) };
 
     match &*command {
         "badazzle" => {
-            for i in 0..input_count {
+            for i in 0..p.input_count {
                 util::output_message(
-                    output,
-                    output_size,
+                    p.output,
+                    p.output_size,
                     capnp_message!(string::Builder, builder => {
                         builder.set_string("A BIG COMPUTATIONS DONE HERE");
                     }),
@@ -48,10 +40,10 @@ extern "C" fn pipeline_run(
             false
         }
         "stuff" => {
-            for i in 0..input_count {
+            for i in 0..p.input_count {
                 util::output_message(
-                    output,
-                    output_size,
+                    p.output,
+                    p.output_size,
                     capnp_message!(string::Builder, builder => {
                         builder.set_string("Here is a computation stuff!");
                     }),
@@ -64,8 +56,8 @@ extern "C" fn pipeline_run(
         }
         _ => {
             util::output_message(
-                output,
-                output_size,
+                p.output,
+                p.output_size,
                 divvun_schema::capnp_error!(
                     divvun_schema::error_capnp::pipeline_error::ErrorKind::UnknownCommand,
                     &format!("unknown command {}", command)
