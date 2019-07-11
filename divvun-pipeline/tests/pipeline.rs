@@ -1,9 +1,8 @@
 #![feature(async_await)]
 
-use std::env;
-use std::fs;
+use std::{env, fs};
 
-use divvun_pipeline::{run::run, file::load_pipeline_file};
+use divvun_pipeline::{file::load_pipeline_file, run::run};
 
 #[runtime::test]
 async fn pipeline_run_with_zpipe() {

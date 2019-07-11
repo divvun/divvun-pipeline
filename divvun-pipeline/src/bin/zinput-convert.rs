@@ -1,4 +1,4 @@
-use std::io::{self};
+use std::io;
 
 use clap::{crate_version, App, Arg};
 
@@ -9,14 +9,15 @@ fn main() {
         .version(crate_version!())
         .author("projektir <oprojektir@gmail.com>")
         .about("Utility for converting input into a divvun-pipeline compatible format.")
-            .arg(Arg::with_name("text")
+        .arg(
+            Arg::with_name("text")
                 .value_name("PATH")
                 .help("Convert text")
                 .short("t")
                 .long("text")
                 .takes_value(true)
-                .required(true)
-            )
+                .required(true),
+        )
         .get_matches();
 
     if let Some(text) = matches.value_of("text") {
