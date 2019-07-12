@@ -1,7 +1,7 @@
 use capnp::message::TypedReader;
 use divvun_schema::{
     error_capnp::pipeline_error,
-    interface::{ModuleRunParameters, PipelineInterface},
+    interface::{ModuleRunParameters, ModuleInterface},
 };
 use std::{ffi::CStr, fmt};
 
@@ -19,10 +19,10 @@ use std::{
 use super::ModuleAllocator;
 use crate::resources::{ResourceHandle, ResourceRegistry};
 
-type PipelineRunFn = fn(*const ModuleRunParameters) -> bool;
+type ModuleRunFn = fn(*const ModuleRunParameters) -> bool;
 
-type PipelinInitFn = fn(*const PipelineInterface) -> bool;
-type PipelinInfoFn = fn(*mut *const u8, *mut usize) -> bool;
+type ModuleInitFn = fn(*const ModuleInterface) -> bool;
+type ModuleInfoFn = fn(*mut *const u8, *mut usize) -> bool;
 
 struct ModuleInterfaceData {
     pub allocator: Arc<ModuleAllocator>,
@@ -105,33 +105,33 @@ pub type MetadataType = TypedReader<
     capnp::serialize::OwnedSegments,
     divvun_schema::module_metadata_capnp::module_metadata::Owned,
 >;
-pub type PipelineErrorType = TypedReader<capnp::serialize::OwnedSegments, pipeline_error::Owned>;
+pub type ModuleErrorType = TypedReader<capnp::serialize::OwnedSegments, pipeline_error::Owned>;
 
 #[derive(Debug)]
-pub struct PipelineRunResult {
+pub struct ModuleRunResult {
     pub output: *const u8,
     pub output_size: usize,
 }
 
-pub enum PipelineRunError {
-    Error(PipelineErrorType),
+pub enum ModuleRunError {
+    Error(ModuleErrorType),
     InitializeFailed,
     InfoFailed,
 }
 
-impl PipelineRunError {
-    pub fn pipeline_error(&self) -> Option<&PipelineErrorType> {
+impl ModuleRunError {
+    pub fn pipeline_error(&self) -> Option<&ModuleErrorType> {
         match self {
-            PipelineRunError::Error(ref error) => Some(error),
+            ModuleRunError::Error(ref error) => Some(error),
             _ => None,
         }
     }
 }
 
-impl fmt::Debug for PipelineRunError {
+impl fmt::Debug for ModuleRunError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            PipelineRunError::Error(ref error_struct) => {
+            ModuleRunError::Error(ref error_struct) => {
                 write!(f, "Pipeline failed to run: ")?;
                 writeln!(
                     f,
@@ -149,10 +149,10 @@ impl fmt::Debug for PipelineRunError {
     }
 }
 
-impl fmt::Display for PipelineRunError {
+impl fmt::Display for ModuleRunError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            PipelineRunError::Error(ref error_struct) => {
+            ModuleRunError::Error(ref error_struct) => {
                 writeln!(f, "Pipeline failed to run")?;
                 writeln!(f, "{:?}", error_struct.get().and_then(|e| e.get_message()))?;
             }
@@ -163,13 +163,13 @@ impl fmt::Display for PipelineRunError {
     }
 }
 
-impl Error for PipelineRunError {}
+impl Error for ModuleRunError {}
 
 #[allow(unused)]
 pub struct Module {
     library: libloading::Library,
     allocator: Arc<ModuleAllocator>,
-    interface: Arc<PipelineInterface>,
+    interface: Arc<ModuleInterface>,
     interface_data: Arc<ModuleInterfaceData>,
     metadata: Option<Mutex<MetadataType>>,
 }
@@ -215,7 +215,7 @@ impl Module {
             resource_registry,
         ));
 
-        let interface = Arc::new(PipelineInterface {
+        let interface = Arc::new(ModuleInterface {
             data: &*interface_data as *const _ as *mut _,
             alloc_fn: alloc,
             load_resource_fn: load_resource,
@@ -246,7 +246,7 @@ impl Module {
     }
 
     fn call_init(&self) -> Result<(), Box<dyn Error>> {
-        let func: libloading::Symbol<PipelinInitFn> =
+        let func: libloading::Symbol<ModuleInitFn> =
             unsafe { self.library.get(b"pipeline_init")? };
 
         info!("pipline_init");
@@ -254,14 +254,14 @@ impl Module {
         info!("pipeline_init result: {}", result);
 
         if !result {
-            return Err(PipelineRunError::InitializeFailed.into());
+            return Err(ModuleRunError::InitializeFailed.into());
         }
 
         Ok(())
     }
 
     fn call_info(&self) -> Result<MetadataType, Box<dyn Error>> {
-        let func: libloading::Symbol<PipelinInfoFn> =
+        let func: libloading::Symbol<ModuleInfoFn> =
             unsafe { self.library.get(b"pipeline_info")? };
 
         let mut metadata: *const u8 = std::ptr::null_mut();
@@ -271,7 +271,7 @@ impl Module {
         let result = func(&mut metadata, &mut metadata_size);
         info!("pipeline_info result: {}", result);
         if !result {
-            return Err(PipelineRunError::InfoFailed.into());
+            return Err(ModuleRunError::InfoFailed.into());
         }
         let msg = divvun_schema::util::read_message::<
             divvun_schema::module_metadata_capnp::module_metadata::Owned,
@@ -286,8 +286,8 @@ impl Module {
         parameters: Option<&Vec<String>>,
         input: Vec<*const u8>,
         input_sizes: Vec<usize>,
-    ) -> Result<PipelineRunResult, Box<dyn Error>> {
-        let func: libloading::Symbol<PipelineRunFn> = unsafe { self.library.get(b"pipeline_run")? };
+    ) -> Result<ModuleRunResult, Box<dyn Error>> {
+        let func: libloading::Symbol<ModuleRunFn> = unsafe { self.library.get(b"pipeline_run")? };
 
         let command = CString::new(command)?;
         let mut output: *const u8 = std::ptr::null();
@@ -324,9 +324,9 @@ impl Module {
                 divvun_schema::util::read_message::<pipeline_error::Owned>(output, output_size)?;
             let message = msg.get()?.get_message()?;
             error!("an error happened: {}", message);
-            Err(Box::new(PipelineRunError::Error(TypedReader::from(msg))))
+            Err(Box::new(ModuleRunError::Error(TypedReader::from(msg))))
         } else {
-            Ok(PipelineRunResult {
+            Ok(ModuleRunResult {
                 output,
                 output_size,
             })

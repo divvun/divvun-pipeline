@@ -5,7 +5,7 @@ use std::{ffi::CStr, os::raw::c_char};
 use capnp::{message::ReaderOptions, serialize};
 use divvun_schema::{
     capnp_message,
-    interface::{self, ModuleRunParameters, PipelineInterface},
+    interface::{self, ModuleRunParameters, ModuleInterface},
     module_metadata,
     string_capnp::string,
     util,
@@ -14,7 +14,7 @@ use lazy_static::lazy_static;
 use std::io::Cursor;
 
 #[no_mangle]
-pub extern "C" fn pipeline_init(interface: *const PipelineInterface) -> bool {
+pub extern "C" fn pipeline_init(interface: *const ModuleInterface) -> bool {
     interface::initialize(interface)
 }
 

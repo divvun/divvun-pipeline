@@ -11,15 +11,15 @@ pub type ReleaseResourceFn = extern "C" fn(*mut c_void, *const c_char) -> bool;
 
 #[derive(Debug)]
 #[repr(C)]
-pub struct PipelineInterface {
+pub struct ModuleInterface {
     pub data: *mut c_void,
     pub alloc_fn: AllocFn,
     pub load_resource_fn: LoadResourceFn,
     pub release_resource_fn: ReleaseResourceFn,
 }
 
-unsafe impl Send for PipelineInterface {}
-unsafe impl Sync for PipelineInterface {}
+unsafe impl Send for ModuleInterface {}
+unsafe impl Sync for ModuleInterface {}
 
 #[derive(Debug)]
 #[repr(C)]
@@ -66,7 +66,7 @@ impl ModuleRunParameters {
     }
 }
 
-impl PipelineInterface {
+impl ModuleInterface {
     pub fn alloc(&self, size: usize) -> Option<*mut u8> {
         let result = (self.alloc_fn)(self.data, size);
         if result == std::ptr::null_mut() {
@@ -128,7 +128,7 @@ impl Drop for PipelineResource {
     }
 }
 
-pub static mut PIPELINE_INTERFACE: Option<*const PipelineInterface> = None;
+pub static mut PIPELINE_INTERFACE: Option<*const ModuleInterface> = None;
 
 /// To be called by the pipeline module to allocate memory needed for large chunks of data
 pub fn allocate(size: usize) -> Option<*mut u8> {
@@ -136,7 +136,7 @@ pub fn allocate(size: usize) -> Option<*mut u8> {
 }
 
 /// To be called by the pipeline module's pipeline_init function to initialize the SDK
-pub fn initialize(interface: *const PipelineInterface) -> bool {
+pub fn initialize(interface: *const ModuleInterface) -> bool {
     unsafe {
         PIPELINE_INTERFACE = Some(interface);
     }
