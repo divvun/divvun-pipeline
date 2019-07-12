@@ -2,6 +2,7 @@ use std::{
     fs::{self, File},
     io::{self, BufReader},
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use log::{error, info};
@@ -9,6 +10,7 @@ use serde_json::Value;
 use zip::ZipArchive;
 
 use crate::pipeline::Pipeline;
+use crate::resources::{Resource, LoadableResource, ResourceRegistry};
 
 pub static PIPELINE_EXTENSION: &'static str = "zpipe";
 static JSON_EXTENSION: &'static str = "json";
@@ -22,7 +24,7 @@ pub enum FileLoadError {
     NoJsonFile,
 }
 
-pub fn load_pipeline_file(pipeline_file: &str) -> Result<Pipeline, FileLoadError> {
+pub fn load_pipeline_file(pipeline_file: &str) -> Result<(Pipeline, Arc<ResourceRegistry>), FileLoadError> {
     info!("Supplied file path: {}", pipeline_file);
 
     let pipeline_file = Path::new(pipeline_file);
@@ -66,6 +68,8 @@ pub fn load_pipeline_file(pipeline_file: &str) -> Result<Pipeline, FileLoadError
         None => None,
     };
 
+    let resource_registry = Arc::new(ResourceRegistry::new());
+
     let file = File::open(pipeline_file).unwrap();
     let reader = BufReader::new(&file);
     let mut archive = ZipArchive::new(reader).expect("zip");
@@ -78,14 +82,15 @@ pub fn load_pipeline_file(pipeline_file: &str) -> Result<Pipeline, FileLoadError
     for i in 0..archive.len() {
         let mut file = archive.by_index(i).unwrap();
         let filename = file.sanitized_name();
-        let ext = filename.extension().unwrap();
+        info!("File {}: {:?}", i, filename);
+        let ext = filename.extension();
 
         if (&*file.name()).ends_with('/') {
             error!("Unexpected directory in zip file {:?} ignoring", filename);
             return Err(FileLoadError::UnsupportedResource);
         }
 
-        if ext == JSON_EXTENSION {
+        if ext.is_some() && ext.unwrap() == JSON_EXTENSION {
             json_file_option = Some(filename.to_owned());
 
             let cloned_parent = parent.clone();
@@ -100,7 +105,23 @@ pub fn load_pipeline_file(pipeline_file: &str) -> Result<Pipeline, FileLoadError
 
             info!("Found {:?}, extracting", filename);
         } else {
-            info!("Unexpected file, ignoring: {:?}", filename);
+            let mut full_file_path = destination_dir.clone();
+            full_file_path.push(filename.to_owned());
+
+            let resource = LoadableResource::from(Resource::new_file(&full_file_path));
+
+            let str_filename = filename.to_str();
+
+            match str_filename {
+                Some(filename) => {
+                    resource_registry.add_resource(filename, resource);
+                    info!("Found resource file {:?}, adding to registry", filename);
+                },
+                None => {
+                    error!("Mangled filename: {:?}", filename);
+                    return Err(FileLoadError::UnsupportedResource);
+                }
+            };
         }
     }
 
@@ -115,8 +136,12 @@ pub fn load_pipeline_file(pipeline_file: &str) -> Result<Pipeline, FileLoadError
     let mut json_file_path = destination_dir.clone();
     json_file_path.push(json_file);
 
-    info!("json_file_path: {:?}", json_file_path);
-    let file = File::open(json_file_path).unwrap();
+    Ok((create_pipeline(json_file_path), resource_registry))
+}
+
+fn create_pipeline(json_file: PathBuf) -> Pipeline {
+    info!("json_file_path: {:?}", json_file);
+    let file = File::open(json_file).unwrap();
     let reader = BufReader::new(&file);
 
     let value: Value = serde_json::from_reader(reader).unwrap();
@@ -127,5 +152,5 @@ pub fn load_pipeline_file(pipeline_file: &str) -> Result<Pipeline, FileLoadError
         root: serde_json::from_str(&json_str).unwrap(),
     };
 
-    Ok(pipeline)
+    pipeline
 }

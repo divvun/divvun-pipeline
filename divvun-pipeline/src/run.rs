@@ -10,9 +10,8 @@ use divvun_schema::string_capnp::string;
 
 use capnp::{message::ReaderOptions, serialize};
 
-pub async fn run(pipeline: &Pipeline, input: Vec<u8>) -> String {
+pub async fn run(pipeline: Pipeline, resources: Arc<ResourceRegistry>, input: Vec<u8>) -> String {
     let allocator = Arc::new(ModuleAllocator::new(AllocationType::Memory));
-    let resources = Arc::new(ResourceRegistry::new());
     let mut registry = ModuleRegistry::new(allocator, resources).unwrap();
     registry.add_search_path(Path::new("../modules"));
     let registry = Arc::new(registry);

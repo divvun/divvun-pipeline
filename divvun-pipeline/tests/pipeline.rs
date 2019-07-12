@@ -17,8 +17,8 @@ async fn pipeline_run_with_zpipe() {
 
     let msg_vec = divvun_schema::util::message_to_vec(msg).unwrap();
 
-    let pipeline = load_pipeline_file("tests/pipeline.zpipe").unwrap();
-    let output = run(&pipeline, msg_vec).await;
+    let (pipeline, registry) = load_pipeline_file("tests/pipeline.zpipe").unwrap();
+    let output = run(pipeline, registry, msg_vec).await;
 
     assert_eq!("EREH ENOD SNOITATUPMOC GIB AHello world!", output);
 

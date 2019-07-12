@@ -39,8 +39,8 @@ async fn main() {
 
     if let Some(pipeline_file) = matches.value_of(pipeline) {
         match load_pipeline_file(pipeline_file) {
-            Ok(pipeline) => {
-                let output = run(&pipeline, buffer).await;
+            Ok((pipeline, resources)) => {
+                let output = run(pipeline, resources,buffer).await;
                 info!("Output: {}", &output);
             }
             Err(e) => {
