@@ -108,7 +108,11 @@ pub fn load_pipeline_file(pipeline_file: &str) -> Result<(Pipeline, Arc<Resource
             let mut full_file_path = destination_dir.clone();
             full_file_path.push(filename.to_owned());
 
+            info!("Loading resource path {:?}", full_file_path);
             let resource = LoadableResource::from(Resource::new_file(&full_file_path));
+
+            let mut outfile = fs::File::create(&full_file_path).unwrap();
+            io::copy(&mut file, &mut outfile).unwrap();
 
             let str_filename = filename.to_str();
 

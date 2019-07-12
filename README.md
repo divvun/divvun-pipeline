@@ -16,7 +16,7 @@ Input, output, divvun-pipeline:
 
 To generate a 0 compression pipeline zip file (on Unix):
 
-`zip -0 -r pipeline.zpipe file1 file2`
+`zip -0 -r pipeline.zpipe pipeline.json yummy_resource`
 
 If you just do `zip -0 -r pipeline.zpipe unzipped`, it will have the actual folder `unzipped` there, which is not supported
 

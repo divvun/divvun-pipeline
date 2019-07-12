@@ -2,7 +2,7 @@
 
 use std::{
     env,
-    io::{self, Read},
+    io::{self, Read, BufReader},
 };
 
 use clap::{crate_version, App, Arg};
@@ -34,13 +34,14 @@ async fn main() {
         )
         .get_matches();
 
-    let mut buffer = Vec::new();
-    io::stdin().read_to_end(&mut buffer).unwrap();
+    let mut vec_buffer = Vec::new();
+    let mut reader = BufReader::new(io::stdin());
+    reader.buffer().read_to_end(&mut vec_buffer).unwrap();
 
     if let Some(pipeline_file) = matches.value_of(pipeline) {
         match load_pipeline_file(pipeline_file) {
             Ok((pipeline, resources)) => {
-                let output = run(pipeline, resources,buffer).await;
+                let output = run(pipeline, resources, vec_buffer).await;
                 info!("Output: {}", &output);
             }
             Err(e) => {

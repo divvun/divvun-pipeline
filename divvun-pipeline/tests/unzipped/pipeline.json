@@ -1,11 +1,14 @@
 [
     { "module": "reverse_string", "command": "reverse"},
+    [
         [
-            [
-                { "module": "do_things_strings", "command": "badazzle" },
-                { "module": "reverse_string", "command": "reverse" }
-            ],
+            { "module": "do_things_strings", "command": "badazzle" },
             { "module": "reverse_string", "command": "reverse" }
-     ],
+        ],
+        { "module": "reverse_string", "command": "reverse" },
+        { "module": "reverse_string", "command": "reverse_resource",
+            "parameters": ["yummy_resource"]
+        }
+    ],
     { "module": "concat_strings", "command": "concat" }
 ]
