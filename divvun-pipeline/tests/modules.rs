@@ -1,9 +1,6 @@
-use std::{path::Path, sync::Arc};
-
 use divvun_pipeline::{
     module::*,
-    pipeline::*,
-    resources::{LoadableResource, Resource, ResourceRegistry},
+    resources::{LoadableResource, Resource},
 };
 use divvun_schema::{string_capnp::string, util};
 
@@ -13,7 +10,7 @@ mod common;
 fn load_run_module_memory() {
     let (registry, allocator, ..) = common::setup_test_registry(AllocationType::Memory);
 
-    let mut module = registry.get_module("reverse_string").unwrap();
+    let module = registry.get_module("reverse_string").unwrap();
     let inputs: Vec<*const u8> = Vec::new();
     let input_sizes: Vec<usize> = Vec::new();
 
@@ -27,7 +24,7 @@ fn load_run_module_memory() {
 fn load_run_module_file() {
     let (registry, allocator, ..) = common::setup_test_registry(AllocationType::File);
 
-    let mut module = registry.get_module("reverse_string").unwrap();
+    let module = registry.get_module("reverse_string").unwrap();
     let inputs: Vec<*const u8> = Vec::new();
     let input_sizes: Vec<usize> = Vec::new();
 
@@ -42,9 +39,9 @@ fn load_run_module_file() {
 
 #[test]
 fn load_run_input_reverse() {
-    let (registry, allocator, ..) = common::setup_test_registry(AllocationType::Memory);
+    let (registry, _allocator, ..) = common::setup_test_registry(AllocationType::Memory);
 
-    let mut module = registry.get_module("reverse_string").unwrap();
+    let module = registry.get_module("reverse_string").unwrap();
 
     let text = util::message_to_vec(divvun_schema::capnp_message!(string::Builder, builder => {
         builder.set_string("hello");
@@ -73,7 +70,7 @@ fn load_run_input_reverse() {
 
 #[test]
 fn load_run_input_reverse_resource() {
-    let (registry, allocator, resources) = common::setup_test_registry(AllocationType::Memory);
+    let (registry, _allocator, resources) = common::setup_test_registry(AllocationType::Memory);
 
     let my_data = "Hello".as_bytes();
     resources.add_resource(
@@ -82,11 +79,6 @@ fn load_run_input_reverse_resource() {
     );
 
     let module = registry.get_module("reverse_string").unwrap();
-
-    let text = util::message_to_vec(divvun_schema::capnp_message!(string::Builder, builder => {
-        builder.set_string("lol");
-    }))
-    .unwrap();
 
     let inputs: Vec<*const u8> = vec![];
     let input_sizes: Vec<usize> = vec![];

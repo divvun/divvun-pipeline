@@ -1,5 +1,4 @@
-use capnp::{message::ReaderOptions, serialize};
-use divvun_schema::{
+    use divvun_schema::{
     capnp_message,
     interface::{self, ModuleRunParameters, ModuleInterface},
     module_metadata,
@@ -7,7 +6,7 @@ use divvun_schema::{
     util,
 };
 use lazy_static::lazy_static;
-use std::{ffi::CStr, io::Cursor, os::raw::c_char};
+use std::ffi::CStr;
 
 #[no_mangle]
 pub extern "C" fn pipeline_init(interface: *const ModuleInterface) -> bool {

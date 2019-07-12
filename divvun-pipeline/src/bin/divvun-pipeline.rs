@@ -35,7 +35,7 @@ async fn main() {
         .get_matches();
 
     let mut vec_buffer = Vec::new();
-    let mut reader = BufReader::new(io::stdin());
+    let reader = BufReader::new(io::stdin());
     reader.buffer().read_to_end(&mut vec_buffer).unwrap();
 
     if let Some(pipeline_file) = matches.value_of(pipeline) {

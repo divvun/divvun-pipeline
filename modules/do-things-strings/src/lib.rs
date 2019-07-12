@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 
-use capnp::{message::ReaderOptions, serialize};
 use divvun_schema::{
     capnp_message,
     interface::{self, ModuleRunParameters, ModuleInterface},
@@ -9,7 +8,7 @@ use divvun_schema::{
     util,
 };
 use lazy_static::lazy_static;
-use std::{ffi::CStr, io::Cursor, os::raw::c_char};
+use std::ffi::CStr;
 
 #[no_mangle]
 pub extern "C" fn pipeline_init(interface: *const ModuleInterface) -> bool {
@@ -20,12 +19,10 @@ pub extern "C" fn pipeline_init(interface: *const ModuleInterface) -> bool {
 pub extern "C" fn pipeline_run(p: *const ModuleRunParameters) -> bool {
     let p = unsafe { &*p };
     let command = unsafe { CStr::from_ptr(p.command) }.to_string_lossy();
-    let input_sizes = unsafe { std::slice::from_raw_parts(p.input_sizes, p.input_count) };
-    let input = unsafe { std::slice::from_raw_parts(p.input, p.input_count) };
 
     match &*command {
         "badazzle" => {
-            for i in 0..p.input_count {
+            for _ in 0..p.input_count {
                 util::output_message(
                     p.output,
                     p.output_size,
@@ -40,7 +37,7 @@ pub extern "C" fn pipeline_run(p: *const ModuleRunParameters) -> bool {
             false
         }
         "stuff" => {
-            for i in 0..p.input_count {
+            for _ in 0..p.input_count {
                 util::output_message(
                     p.output,
                     p.output_size,

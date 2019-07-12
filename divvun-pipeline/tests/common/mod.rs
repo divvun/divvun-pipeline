@@ -2,8 +2,7 @@ use std::{path::Path, sync::Arc};
 
 use divvun_pipeline::{
     module::*,
-    pipeline::*,
-    resources::{LoadableResource, Resource, ResourceRegistry},
+    resources::ResourceRegistry,
 };
 
 pub fn setup_test_registry(

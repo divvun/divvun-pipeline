@@ -167,7 +167,7 @@ mod tests {
     fn resources_test() {
         let _ = env_logger::builder().is_test(true).try_init();
 
-        let mut registry = ResourceRegistry::new();
+        let registry = ResourceRegistry::new();
         let my_data = "Hello".as_bytes();
         registry.add_resource(
             "lol",

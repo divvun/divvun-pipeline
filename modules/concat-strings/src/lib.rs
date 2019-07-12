@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::{ffi::CStr, os::raw::c_char};
+use std::ffi::CStr;
 
 use capnp::{message::ReaderOptions, serialize};
 use divvun_schema::{
