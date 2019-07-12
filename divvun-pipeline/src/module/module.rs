@@ -5,7 +5,7 @@ use divvun_schema::{
 };
 use std::{ffi::CStr, fmt};
 
-use log::{error, info};
+use log::{error, info, debug};
 use parking_lot::Mutex;
 use std::{
     collections::HashMap,
@@ -178,26 +178,28 @@ fn log_metadata(metadata: &MetadataType) -> Result<(), Box<dyn Error>> {
     let metadata_inner = metadata.get()?;
     let module_name = metadata_inner.get_module_name()?;
     let commands = metadata_inner.get_commands()?;
-    info!("ModuleMetadata {{");
-    info!("  moduleName: \"{}\",", module_name);
-    info!("  commands: {{");
+    debug!("ModuleMetadata {{");
+    debug!("  moduleName: \"{}\",", module_name);
+    debug!("  commands: {{");
     for i in 0..commands.len() {
         let command = commands.get(i);
         let inputs = command.get_inputs()?;
         let command_name = command.get_name()?;
-        info!("    {} => {{", command_name);
-        info!("      output: {},", command.get_output());
-        info!(
+        debug!("    {} => {{", command_name);
+        debug!("      output: {},", command.get_output());
+        debug!(
             "      inputs: [{}],",
             (0..inputs.len())
                 .map(|i| inputs.get(i).to_string())
                 .collect::<Vec<String>>()
                 .join(", ")
         );
-        info!("    }}");
+        debug!("    }}");
     }
-    info!("  }}");
-    info!("}}");
+
+    debug!("  }}");
+    debug!("}}");
+
     Ok(())
 }
 
@@ -248,9 +250,9 @@ impl Module {
     fn call_init(&self) -> Result<(), Box<dyn Error>> {
         let func: libloading::Symbol<ModuleInitFn> = unsafe { self.library.get(b"pipeline_init")? };
 
-        info!("pipline_init");
+        debug!("pipline_init");
         let result = func(&*self.interface);
-        info!("pipeline_init result: {}", result);
+        debug!("pipeline_init result: {}", result);
 
         if !result {
             return Err(ModuleRunError::InitializeFailed.into());
@@ -265,9 +267,9 @@ impl Module {
         let mut metadata: *const u8 = std::ptr::null_mut();
         let mut metadata_size: usize = 0;
 
-        info!("pipeline_info");
+        debug!("pipeline_info");
         let result = func(&mut metadata, &mut metadata_size);
-        info!("pipeline_info result: {}", result);
+        debug!("pipeline_info result: {}", result);
         if !result {
             return Err(ModuleRunError::InfoFailed.into());
         }
