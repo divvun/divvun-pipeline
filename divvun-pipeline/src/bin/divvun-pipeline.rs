@@ -1,6 +1,9 @@
 #![feature(async_await)]
 
-use std::env;
+use std::{
+    env,
+    io::{self, Read},
+};
 
 use clap::{crate_version, App, Arg};
 use log::{error, info};
@@ -31,10 +34,13 @@ async fn main() {
         )
         .get_matches();
 
+    let mut buffer = Vec::new();
+    io::stdin().read_to_end(&mut buffer).unwrap();
+
     if let Some(pipeline_file) = matches.value_of(pipeline) {
         match load_pipeline_file(pipeline_file) {
             Ok(pipeline) => {
-                let output = run(&pipeline).await;
+                let output = run(&pipeline, buffer).await;
                 info!("Output: {}", &output);
             }
             Err(e) => {

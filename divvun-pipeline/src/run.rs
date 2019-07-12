@@ -6,29 +6,23 @@ use crate::{
 };
 
 use crate::resources::ResourceRegistry;
-use divvun_schema::{capnp_message, string_capnp::string};
+use divvun_schema::string_capnp::string;
 
 use capnp::{message::ReaderOptions, serialize};
 
-pub async fn run(pipeline: &Pipeline) -> String {
+pub async fn run(pipeline: &Pipeline, input: Vec<u8>) -> String {
     let allocator = Arc::new(ModuleAllocator::new(AllocationType::Memory));
     let resources = Arc::new(ResourceRegistry::new());
     let mut registry = ModuleRegistry::new(allocator, resources).unwrap();
     registry.add_search_path(Path::new("../modules"));
     let registry = Arc::new(registry);
 
-    let msg = capnp_message!(string::Builder, builder => {
-        builder.set_string("Hello world!");
-    });
-
-    let msg_vec = divvun_schema::util::message_to_vec(msg).unwrap();
-
     let result = pipeline
         .run(
             registry.clone(),
             Arc::new(vec![Arc::new(PipelineData {
-                data: msg_vec.as_ptr(),
-                size: msg_vec.len(),
+                data: input.as_ptr(),
+                size: input.len(),
             })]),
         )
         .await;
