@@ -6,5 +6,5 @@ members = [
     "modules/reverse-string",
     "modules/concat-strings",
     "modules/do-things-strings",
-    "modules/hfst",
+    #"modules/hfst",
 ]
