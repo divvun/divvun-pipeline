@@ -1,7 +1,7 @@
 use capnp::message::TypedReader;
 use divvun_schema::{
     error_capnp::pipeline_error,
-    interface::{ModuleRunParameters, ModuleInterface},
+    interface::{ModuleInterface, ModuleRunParameters},
 };
 use std::{ffi::CStr, fmt};
 
@@ -246,8 +246,7 @@ impl Module {
     }
 
     fn call_init(&self) -> Result<(), Box<dyn Error>> {
-        let func: libloading::Symbol<ModuleInitFn> =
-            unsafe { self.library.get(b"pipeline_init")? };
+        let func: libloading::Symbol<ModuleInitFn> = unsafe { self.library.get(b"pipeline_init")? };
 
         info!("pipline_init");
         let result = func(&*self.interface);
@@ -261,8 +260,7 @@ impl Module {
     }
 
     fn call_info(&self) -> Result<MetadataType, Box<dyn Error>> {
-        let func: libloading::Symbol<ModuleInfoFn> =
-            unsafe { self.library.get(b"pipeline_info")? };
+        let func: libloading::Symbol<ModuleInfoFn> = unsafe { self.library.get(b"pipeline_info")? };
 
         let mut metadata: *const u8 = std::ptr::null_mut();
         let mut metadata_size: usize = 0;

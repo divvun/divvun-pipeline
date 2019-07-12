@@ -29,7 +29,6 @@ impl Resource {
     pub fn load(&mut self) -> Result<(), Box<dyn Error>> {
         info!("load");
         match self {
-
             Resource::File { path, ref mut mmap } => {
                 info!("loading path: {}", path.display());
                 let file = File::open(path)?;

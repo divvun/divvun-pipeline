@@ -5,7 +5,7 @@ use std::ffi::CStr;
 use capnp::{message::ReaderOptions, serialize};
 use divvun_schema::{
     capnp_message,
-    interface::{self, ModuleRunParameters, ModuleInterface},
+    interface::{self, ModuleInterface, ModuleRunParameters},
     module_metadata,
     string_capnp::string,
     util,

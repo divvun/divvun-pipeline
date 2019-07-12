@@ -20,7 +20,10 @@ async fn pipeline_run_with_zpipe() {
     let (pipeline, registry) = load_pipeline_file("tests/pipeline.zpipe").unwrap();
     let output = run(pipeline, registry, msg_vec).await;
 
-    assert_eq!("EREH ENOD SNOITATUPMOC GIB AHello world!\n😋\n!ymmuy", output);
+    assert_eq!(
+        "EREH ENOD SNOITATUPMOC GIB AHello world!\n😋\n!ymmuy",
+        output
+    );
 
     fs::remove_dir_all("tests/pipeline").expect("failed to remove test pipeline directory");
 }

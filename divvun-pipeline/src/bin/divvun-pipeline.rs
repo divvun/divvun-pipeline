@@ -2,7 +2,7 @@
 
 use std::{
     env,
-    io::{self, Read, BufReader},
+    io::{self, BufReader, Read},
 };
 
 use clap::{crate_version, App, Arg};

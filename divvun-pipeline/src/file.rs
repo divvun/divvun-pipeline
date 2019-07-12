@@ -9,8 +9,10 @@ use log::{error, info};
 use serde_json::Value;
 use zip::ZipArchive;
 
-use crate::pipeline::Pipeline;
-use crate::resources::{Resource, LoadableResource, ResourceRegistry};
+use crate::{
+    pipeline::Pipeline,
+    resources::{LoadableResource, Resource, ResourceRegistry},
+};
 
 pub static PIPELINE_EXTENSION: &'static str = "zpipe";
 static JSON_EXTENSION: &'static str = "json";
@@ -24,7 +26,9 @@ pub enum FileLoadError {
     NoJsonFile,
 }
 
-pub fn load_pipeline_file(pipeline_file: &str) -> Result<(Pipeline, Arc<ResourceRegistry>), FileLoadError> {
+pub fn load_pipeline_file(
+    pipeline_file: &str,
+) -> Result<(Pipeline, Arc<ResourceRegistry>), FileLoadError> {
     info!("Supplied file path: {}", pipeline_file);
 
     let pipeline_file = Path::new(pipeline_file);
@@ -120,7 +124,7 @@ pub fn load_pipeline_file(pipeline_file: &str) -> Result<(Pipeline, Arc<Resource
                 Some(filename) => {
                     resource_registry.add_resource(filename, resource);
                     info!("Found resource file {:?}, adding to registry", filename);
-                },
+                }
                 None => {
                     error!("Mangled filename: {:?}", filename);
                     return Err(FileLoadError::UnsupportedResource);

@@ -24,7 +24,8 @@ fn main() {
     include!(concat!(env!("OUT_DIR"), "/{file_name}.rs"));
 }}"#,
                 file_name = capnp_name
-            ).unwrap();
+            )
+            .unwrap();
         }
     }
 
