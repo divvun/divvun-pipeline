@@ -38,3 +38,9 @@ Exercise for the reader, but probably modify one of the other files to refer to 
 See modules/hfst/README.md about getting the latest hfst binaries to compile. Get the se.zcheck file from somewhere and extract to the folder se_zcheck.
 
 Unignore the test in divvun-pipeline/tests/hfst.rs and run that after compiling & copying everything with ./test.sh
+
+# Building on Linux
+There's a Dockerfile that sets up a Debian build environment. It can be built, run and attached to the current directory with:
+`docker build -t divvun-pipeline . && docker run --rm -ti -v ${PWD}:/opt divvun-pipeline /bin/bash`
+
+Particularly of importance for building some dependencies (hfst for example) is a modern clang version, which Debian (stretch) does not appear to have.
