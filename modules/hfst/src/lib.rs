@@ -122,8 +122,6 @@ pub extern "C" fn pipeline_run(p: *const ModuleRunParameters) -> bool {
                 )
                 .unwrap();
 
-                println!("returning from reverse");
-
                 return true;
             }
 

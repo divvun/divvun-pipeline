@@ -8,10 +8,10 @@ edition = "2018"
 crate-type = ["cdylib"]
 
 [dependencies]
-capnp = "0.10.0"
+capnp = "0.10.1"
 divvun-schema = { path = "../../divvun-schema" }
 lazy_static = "1.3.0"
 
 [build-dependencies]
-cc = "1.0.37"
-bindgen = "0.50.0"
+cc = "1.0.40"
+bindgen = "0.51.0"

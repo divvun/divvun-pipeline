@@ -19,7 +19,7 @@ async fn pipeline_run_with_zpipe() {
 
     let mut pipeline_file = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     pipeline_file.push("tests/pipeline.zpipe");
-    let (pipeline, registry) = load_pipeline_file(&pipeline_file).unwrap();
+    let (pipeline, registry, _td) = load_pipeline_file(&pipeline_file).unwrap();
     let runner = PipelinRunConfigurationBuilder::default()
         .pipeline(pipeline)
         .resources(registry)
@@ -33,6 +33,4 @@ async fn pipeline_run_with_zpipe() {
         "EREH ENOD SNOITATUPMOC GIB AHello world!\n😋\n!ymmuy",
         output
     );
-
-    fs::remove_dir_all("tests/pipeline").expect("failed to remove test pipeline directory");
 }

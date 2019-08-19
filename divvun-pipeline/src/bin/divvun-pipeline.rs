@@ -41,7 +41,7 @@ async fn main() {
 
     if let Some(pipeline_file) = matches.value_of(pipeline) {
         match load_pipeline_file(Path::new(pipeline_file)) {
-            Ok((pipeline, resources)) => {
+            Ok((pipeline, resources, _td)) => {
                 let output = run(pipeline, resources, vec_buffer).await;
                 info!("Output: {}", &output);
             }

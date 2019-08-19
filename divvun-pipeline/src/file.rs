@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
+use tempfile::{tempdir, TempDir};
 
 use log::{error, info};
 use serde_json::Value;
@@ -21,14 +22,14 @@ static JSON_EXTENSION: &'static str = "json";
 pub enum FileLoadError {
     NotAFile,
     InvalidExtension,
-    NoStem,
+    NoTempDir,
     UnsupportedResource,
     NoJsonFile,
 }
 
 pub fn load_pipeline_file(
     pipeline_file: &Path,
-) -> Result<(Pipeline, Arc<ResourceRegistry>), FileLoadError> {
+) -> Result<(Pipeline, Arc<ResourceRegistry>, TempDir), FileLoadError> {
     info!("Supplied file path: {}", pipeline_file.display());
 
     if !pipeline_file.is_file() {
@@ -51,23 +52,13 @@ pub fn load_pipeline_file(
         return Err(FileLoadError::InvalidExtension);
     }
 
-    let file_stem = match pipeline_file.file_stem() {
-        Some(file_stem) => file_stem,
-        None => {
-            error!("File stem missing");
-            return Err(FileLoadError::NoStem);
+    // Temporary dir to extract archive to
+    let temp_target_dir = match tempdir() {
+        Ok(dir) => dir,
+        Err(_) => {
+            error!("Failed to create temporary directory");
+            return Err(FileLoadError::NoTempDir);
         }
-    };
-
-    let parent = match pipeline_file.parent() {
-        Some(parent) => {
-            let mut new_parent = parent.to_path_buf();
-            new_parent.push(file_stem);
-
-            fs::create_dir_all(&new_parent).unwrap();
-            Some(new_parent)
-        }
-        None => None,
     };
 
     let resource_registry = Arc::new(ResourceRegistry::new());
@@ -78,8 +69,7 @@ pub fn load_pipeline_file(
 
     info!("File count: {}", archive.len());
 
-    let mut json_file_option = None;
-    let mut destination_dir = PathBuf::default();
+    let mut json_file_path = None;
 
     for i in 0..archive.len() {
         let mut file = archive.by_index(i).unwrap();
@@ -93,22 +83,15 @@ pub fn load_pipeline_file(
         }
 
         if ext.is_some() && ext.unwrap() == JSON_EXTENSION {
-            json_file_option = Some(filename.to_owned());
+            info!("Found {:?}, extracting", filename);
 
-            let cloned_parent = parent.clone();
-            if cloned_parent.is_some() {
-                destination_dir.push(cloned_parent.unwrap());
-            }
-
-            let mut temp_destination = destination_dir.clone();
-            temp_destination.push(filename.clone());
-            let mut outfile = fs::File::create(&temp_destination).unwrap();
+            let json_file_dest = temp_target_dir.path().join(filename.clone());
+            let mut outfile = fs::File::create(&json_file_dest).unwrap();
             io::copy(&mut file, &mut outfile).unwrap();
 
-            info!("Found {:?}, extracting", filename);
+            json_file_path = Some(json_file_dest);
         } else {
-            let mut full_file_path = destination_dir.clone();
-            full_file_path.push(filename.to_owned());
+            let full_file_path = temp_target_dir.path().join(filename.to_owned());
 
             info!("Loading resource path {:?}", full_file_path);
             let resource = LoadableResource::from(Resource::new_file(&full_file_path));
@@ -131,21 +114,21 @@ pub fn load_pipeline_file(
         }
     }
 
-    let json_file;
-    if json_file_option.is_none() {
+    let json_file_path = if json_file_path.is_none() {
         error!("No .json file found");
         return Err(FileLoadError::NoJsonFile);
     } else {
-        json_file = json_file_option.unwrap();
-    }
+        json_file_path.unwrap()
+    };
 
-    let mut json_file_path = destination_dir.clone();
-    json_file_path.push(json_file);
-
-    Ok((create_pipeline(json_file_path), resource_registry))
+    Ok((
+        create_pipeline(&json_file_path),
+        resource_registry,
+        temp_target_dir,
+    ))
 }
 
-fn create_pipeline(json_file: PathBuf) -> Pipeline {
+fn create_pipeline(json_file: &Path) -> Pipeline {
     info!("json_file_path: {:?}", json_file);
     let file = File::open(json_file).unwrap();
     let reader = BufReader::new(&file);
