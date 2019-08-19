@@ -27,11 +27,9 @@ pub enum FileLoadError {
 }
 
 pub fn load_pipeline_file(
-    pipeline_file: &str,
+    pipeline_file: &Path,
 ) -> Result<(Pipeline, Arc<ResourceRegistry>), FileLoadError> {
-    info!("Supplied file path: {}", pipeline_file);
-
-    let pipeline_file = Path::new(pipeline_file);
+    info!("Supplied file path: {}", pipeline_file.display());
 
     if !pipeline_file.is_file() {
         error!(

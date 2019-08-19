@@ -5,7 +5,7 @@ use divvun_schema::{
 };
 use std::{ffi::CStr, fmt};
 
-use log::{error, info, debug};
+use log::{debug, error, info};
 use parking_lot::Mutex;
 use std::{
     collections::HashMap,

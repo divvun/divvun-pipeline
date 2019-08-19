@@ -3,6 +3,7 @@
 use std::{
     env,
     io::{self, BufReader, Read},
+    path::Path,
 };
 
 use clap::{crate_version, App, Arg};
@@ -39,7 +40,7 @@ async fn main() {
     reader.buffer().read_to_end(&mut vec_buffer).unwrap();
 
     if let Some(pipeline_file) = matches.value_of(pipeline) {
-        match load_pipeline_file(pipeline_file) {
+        match load_pipeline_file(Path::new(pipeline_file)) {
             Ok((pipeline, resources)) => {
                 let output = run(pipeline, resources, vec_buffer).await;
                 info!("Output: {}", &output);
