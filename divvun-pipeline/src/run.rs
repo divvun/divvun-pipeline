@@ -1,31 +1,41 @@
-use std::{io::Cursor, path::PathBuf, sync::Arc};
-
 use crate::{
     module::{AllocationType, ModuleAllocator, ModuleRegistry},
     pipeline::{Pipeline, PipelineData},
+    resources::ResourceRegistry,
 };
-
-use crate::resources::ResourceRegistry;
-use divvun_schema::string_capnp::string;
-
 use capnp::{message::ReaderOptions, serialize};
+use divvun_schema::string_capnp::string;
+use log::info;
+use std::{
+    io::{Cursor, Read},
+    path::PathBuf,
+    sync::Arc,
+};
 
 const DEFAULT_MODULE_SEARCH_PATH: &str = "modules";
 
 #[derive(Builder)]
 #[builder(pattern = "owned")]
 pub struct PipelinRunConfiguration {
-    #[builder(default = "PathBuf::from(DEFAULT_MODULE_SEARCH_PATH)")]
+    #[builder(default = PathBuf::from(DEFAULT_MODULE_SEARCH_PATH))]
     module_search_path: PathBuf,
     pipeline: Pipeline,
     resources: Arc<ResourceRegistry>,
     input: Vec<u8>,
+    #[builder(default = "AllocationType::Memory")]
+    allocation_type: AllocationType,
+}
+
+pub struct PipelineRunOutput {
+    allocator: Arc<ModuleAllocator>,
+    pub output: Box<dyn Read>,
 }
 
 impl PipelinRunConfiguration {
-    pub async fn run(&self) -> String {
-        let allocator = Arc::new(ModuleAllocator::new(AllocationType::Memory));
-        let mut registry = ModuleRegistry::new(allocator, Arc::clone(&self.resources)).unwrap();
+    pub async fn run(&self) -> PipelineRunOutput {
+        let allocator = Arc::new(ModuleAllocator::new(self.allocation_type));
+        let mut registry =
+            ModuleRegistry::new(Arc::clone(&allocator), Arc::clone(&self.resources)).unwrap();
         registry.add_search_path(&self.module_search_path);
         let registry = Arc::new(registry);
 
@@ -47,17 +57,21 @@ impl PipelinRunConfiguration {
         let output_size = output.size;
 
         let slice = unsafe { std::slice::from_raw_parts(output_data, output_size) };
+        info!("output size {}", output_size);
+        let cursor = Cursor::new(slice);
 
-        let mut cursor = Cursor::new(slice);
-        let message = serialize::read_message(&mut cursor, ReaderOptions::new()).unwrap();
-        let string = message.get_root::<string::Reader>().unwrap();
-        let result = string.get_string().unwrap();
-
-        result.to_owned()
+        PipelineRunOutput {
+            allocator,
+            output: Box::new(cursor),
+        }
     }
 }
 
-pub async fn run(pipeline: Pipeline, resources: Arc<ResourceRegistry>, input: Vec<u8>) -> String {
+pub async fn run(
+    pipeline: Pipeline,
+    resources: Arc<ResourceRegistry>,
+    input: Vec<u8>,
+) -> PipelineRunOutput {
     let pipeline = PipelinRunConfigurationBuilder::default()
         .pipeline(pipeline)
         .resources(resources)

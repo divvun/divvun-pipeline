@@ -7,8 +7,12 @@ use divvun_schema::{
     util,
 };
 use lazy_static::lazy_static;
-use std::{ffi::CStr, io::Cursor, os::raw::c_char, str};
-use std::ffi::c_void;
+use std::{
+    ffi::{c_void, CStr},
+    io::Cursor,
+    os::raw::c_char,
+    str,
+};
 
 extern "C" {
     fn cg3_run(
@@ -74,8 +78,6 @@ pub extern "C" fn pipeline_run(p: *const ModuleRunParameters) -> bool {
                         &mut output_size,
                     )
                 };
-
-                println!("output size: {}", output_size);
 
                 // When we have a interface deallocate function we can use our allocation system to
                 // allocate the temporary buffer.

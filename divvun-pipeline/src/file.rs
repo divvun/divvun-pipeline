@@ -6,9 +6,10 @@ use std::{
 };
 use tempfile::{tempdir, TempDir};
 
-use log::{error, info};
+use log::{error, info, warn};
+use memmap::MmapOptions;
 use serde_json::Value;
-use zip::ZipArchive;
+use zip::{CompressionMethod, ZipArchive};
 
 use crate::{
     pipeline::Pipeline,
@@ -63,8 +64,8 @@ pub fn load_pipeline_file(
 
     let resource_registry = Arc::new(ResourceRegistry::new());
 
-    let file = File::open(pipeline_file).unwrap();
-    let reader = BufReader::new(&file);
+    let zip_file = File::open(pipeline_file).unwrap();
+    let reader = BufReader::new(&zip_file);
     let mut archive = ZipArchive::new(reader).expect("zip");
 
     info!("File count: {}", archive.len());
@@ -91,17 +92,32 @@ pub fn load_pipeline_file(
 
             json_file_path = Some(json_file_dest);
         } else {
-            let full_file_path = temp_target_dir.path().join(filename.to_owned());
+            let resource = if file.compression() != CompressionMethod::Stored {
+                // Extract the resource first
+                let full_file_path = temp_target_dir.path().join(filename.to_owned());
+                warn!(
+                    "File {} is not stored, extracing to {}",
+                    filename.display(),
+                    full_file_path.display()
+                );
 
-            info!("Loading resource path {:?}", full_file_path);
-            let resource = LoadableResource::from(Resource::new_file(&full_file_path));
+                let mut outfile = fs::File::create(&full_file_path).unwrap();
+                io::copy(&mut file, &mut outfile).unwrap();
 
-            let mut outfile = fs::File::create(&full_file_path).unwrap();
-            io::copy(&mut file, &mut outfile).unwrap();
+                LoadableResource::from(Resource::new_file(&full_file_path))
+            } else {
+                // Load resource directly mapped from the zip
+                let mmap = unsafe {
+                    MmapOptions::new()
+                        .offset(file.data_start())
+                        .len(file.size() as usize)
+                        .map(&zip_file)
+                        .expect("mmap failed")
+                };
+                LoadableResource::from(Resource::Mmap(mmap))
+            };
 
-            let str_filename = filename.to_str();
-
-            match str_filename {
+            match filename.to_str() {
                 Some(filename) => {
                     resource_registry.add_resource(filename, resource);
                     info!("Found resource file {:?}, adding to registry", filename);

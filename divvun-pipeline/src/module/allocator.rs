@@ -8,7 +8,7 @@ pub struct ModuleAllocator {
     mmaps: RwLock<Vec<MmapMut>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum AllocationType {
     File,
     Memory,

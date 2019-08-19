@@ -15,6 +15,7 @@ use std::collections::HashMap;
 
 pub enum Resource {
     File { path: PathBuf, mmap: Option<Mmap> },
+    Mmap(Mmap),
     Bytes(Vec<u8>),
 }
 
@@ -36,6 +37,7 @@ impl Resource {
                 Ok(())
             }
             Resource::Bytes(_) => Ok(()),
+            Resource::Mmap(_) => Ok(()),
         }
     }
 
@@ -46,6 +48,7 @@ impl Resource {
                 Ok(())
             }
             Resource::Bytes(_) => Ok(()),
+            Resource::Mmap(_) => Ok(()),
         }
     }
 
@@ -53,6 +56,7 @@ impl Resource {
         match self {
             Resource::File { ref mmap, .. } => mmap.as_ref().map(|mmap| mmap.len()),
             Resource::Bytes(vec) => Some(vec.len()),
+            Resource::Mmap(mmap) => Some(mmap.len()),
         }
     }
 
@@ -60,6 +64,7 @@ impl Resource {
         match self {
             Resource::File { ref mmap, .. } => mmap.as_ref().map(|mmap| mmap.as_ptr()),
             Resource::Bytes(vec) => Some(vec.as_ptr()),
+            Resource::Mmap(mmap) => Some(mmap.as_ptr()),
         }
     }
 }
