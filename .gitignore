@@ -12,3 +12,4 @@ Cargo.lock
 **/*.so
 **/*.dylib
 **/*.dll
+*.zpipe
