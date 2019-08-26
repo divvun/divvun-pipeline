@@ -16,7 +16,7 @@ const DEFAULT_MODULE_SEARCH_PATH: &str = "modules";
 
 #[derive(Builder)]
 #[builder(pattern = "owned")]
-pub struct PipelinRunConfiguration {
+pub struct PipelineRunConfiguration {
     #[builder(default = PathBuf::from(DEFAULT_MODULE_SEARCH_PATH))]
     module_search_path: PathBuf,
     pipeline: Pipeline,
@@ -31,7 +31,7 @@ pub struct PipelineRunOutput {
     pub output: Box<dyn Read>,
 }
 
-impl PipelinRunConfiguration {
+impl PipelineRunConfiguration {
     pub async fn run(&self) -> PipelineRunOutput {
         let allocator = Arc::new(ModuleAllocator::new(self.allocation_type));
         let mut registry =
@@ -72,7 +72,7 @@ pub async fn run(
     resources: Arc<ResourceRegistry>,
     input: Vec<u8>,
 ) -> PipelineRunOutput {
-    let pipeline = PipelinRunConfigurationBuilder::default()
+    let pipeline = PipelineRunConfigurationBuilder::default()
         .pipeline(pipeline)
         .resources(resources)
         .input(input)

@@ -11,7 +11,7 @@ use log::{error, info};
 
 use divvun_pipeline::{
     file::{load_pipeline_file, PIPELINE_EXTENSION},
-    run::PipelinRunConfigurationBuilder,
+    run::PipelineRunConfigurationBuilder,
     module::AllocationType
 };
 
@@ -53,7 +53,7 @@ async fn main() {
     if let Some(pipeline_file) = matches.value_of(pipeline) {
         match load_pipeline_file(Path::new(pipeline_file)) {
             Ok((pipeline, resources, _td)) => {
-                let mut builder = PipelinRunConfigurationBuilder::default()
+                let mut builder = PipelineRunConfigurationBuilder::default()
                     .pipeline(pipeline)
                     .resources(resources)
                     .input(vec_buffer);

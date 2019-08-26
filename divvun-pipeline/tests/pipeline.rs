@@ -1,6 +1,6 @@
 #![feature(async_await)]
 
-use divvun_pipeline::{file::load_pipeline_file, run::PipelinRunConfigurationBuilder};
+use divvun_pipeline::{file::load_pipeline_file, run::PipelineRunConfigurationBuilder};
 use divvun_schema::{capnp_message, string_capnp::string};
 use std::{env, fs, path::PathBuf};
 
@@ -20,7 +20,7 @@ async fn pipeline_run_with_zpipe() {
     let mut pipeline_file = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     pipeline_file.push("tests/pipeline.zpipe");
     let (pipeline, registry, _td) = load_pipeline_file(&pipeline_file).unwrap();
-    let runner = PipelinRunConfigurationBuilder::default()
+    let runner = PipelineRunConfigurationBuilder::default()
         .pipeline(pipeline)
         .resources(registry)
         .input(msg_vec)
