@@ -21,6 +21,7 @@ static JSON_EXTENSION: &'static str = "json";
 
 #[derive(Debug)]
 pub enum FileLoadError {
+    NotExisting,
     NotAFile,
     InvalidExtension,
     NoTempDir,
@@ -32,6 +33,14 @@ pub fn load_pipeline_file(
     pipeline_file: &Path,
 ) -> Result<(Pipeline, Arc<ResourceRegistry>, TempDir), FileLoadError> {
     info!("Supplied file path: {}", pipeline_file.display());
+
+    if !pipeline_file.exists() {
+        error!(
+            "The supplied file {} does not exist",
+            pipeline_file.display()
+        );
+        return Err(FileLoadError::NotExisting);
+    }
 
     if !pipeline_file.is_file() {
         error!(
