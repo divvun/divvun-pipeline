@@ -23,7 +23,6 @@ async fn main() {
 
     let matches = App::new("divvun-pipeline")
         .version(crate_version!())
-        .author("projektir <oprojektir@gmail.com>")
         .about("Asynchronous parallel pipeline for text processing.")
         .arg(
             Arg::with_name(pipeline)

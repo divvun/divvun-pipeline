@@ -1,7 +1,11 @@
 [package]
 name = "divvun-schema"
 version = "0.1.0"
-authors = ["Eike Siewertsen <eike@technocreatives.com>"]
+authors = [
+  "Eike Siewertsen <eike@technocreatives.com>",
+  "projektir <oprojektir@gmail.com>"
+]
+license = "Apache-2.0 OR MIT"
 edition = "2018"
 
 [dependencies]

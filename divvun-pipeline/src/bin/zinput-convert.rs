@@ -7,7 +7,6 @@ use divvun_schema::{capnp_message, string_capnp::string};
 fn main() {
     let matches = App::new("zinput-convert")
         .version(crate_version!())
-        .author("projektir <oprojektir@gmail.com>")
         .about("Utility for converting input into a divvun-pipeline compatible format.")
         .arg(
             Arg::with_name("text")
