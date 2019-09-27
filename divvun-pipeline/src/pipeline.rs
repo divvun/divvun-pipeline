@@ -1,7 +1,8 @@
-use futures::future::join_all;
+use std::sync::Arc;
+
+use futures::future::{FutureExt, join_all};
 use log::info;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 use crate::module::ModuleRegistry;
 
@@ -59,75 +60,89 @@ impl Pipeline {
 }
 
 impl PipelineNodeSerial {
-    async fn run(
-        &self,
+    fn run<'a>(
+        &'a self,
         registry: Arc<ModuleRegistry>,
         input: PipelineType,
-    ) -> Result<PipelineType, PipelineError> {
-        match self {
-            PipelineNodeSerial::SerialSingle(command) => process_single(registry, command, input),
-            PipelineNodeSerial::SerialMultiple(nodes) => {
-                let mut input = input.clone();
+    ) -> std::pin::Pin<Box<
+        dyn futures::future::Future<
+            Output = Result<PipelineType, PipelineError>
+        > + 'a + Send
+    >> {
+        use futures::future::FutureExt;
 
-                for node in nodes {
-                    input = node.run(Arc::clone(&registry), input).await?;
+        async move {
+            match self {
+                PipelineNodeSerial::SerialSingle(command) => process_single(registry, command, input),
+                PipelineNodeSerial::SerialMultiple(nodes) => {
+                    let mut input = input.clone();
+
+                    for node in nodes {
+                        input = node.run(Arc::clone(&registry), input).await?;
+                    }
+
+                    Ok(input)
                 }
-
-                Ok(input)
             }
-        }
+        }.boxed()
     }
 }
 
 impl PipelineNodeParallel {
-    async fn run(
-        &self,
+    fn run<'a>(
+        &'a self,
         registry: Arc<ModuleRegistry>,
         input: PipelineType,
-    ) -> Result<PipelineType, PipelineError> {
-        match self {
-            PipelineNodeParallel::ParallelSingle(command) => {
-                process_single(registry, command, input)
-            }
-            PipelineNodeParallel::ParallelMultiple(nodes) => {
-                let new_input = input.clone();
-
-                let mut vector = Vec::new();
-                for node in nodes {
-                    vector.push(node.run(Arc::clone(&registry), new_input.clone()));
+    ) -> std::pin::Pin<Box<
+        dyn futures::future::Future<
+            Output = Result<PipelineType, PipelineError>
+        > + 'a + Send
+    >> {
+        async move {
+            match self {
+                PipelineNodeParallel::ParallelSingle(command) => {
+                    process_single(registry, command, input)
                 }
+                PipelineNodeParallel::ParallelMultiple(nodes) => {
+                    let new_input = input.clone();
 
-                let future_results = join_all(vector).await;
+                    let mut vector = Vec::new();
+                    for node in nodes {
+                        vector.push(node.run(Arc::clone(&registry), new_input.clone()));
+                    }
 
-                let mut errors: Vec<PipelineError> = Vec::new();
+                    let future_results = join_all(vector).await;
 
-                let outputs = future_results
-                    .into_iter()
-                    .map(|result_vec| {
-                        let mut vector: Vec<Arc<PipelineData>> = Vec::new();
+                    let mut errors: Vec<PipelineError> = Vec::new();
 
-                        match result_vec {
-                            Ok(arced_vec) => {
-                                for data in arced_vec.iter() {
-                                    vector.push(data.clone());
+                    let outputs = future_results
+                        .into_iter()
+                        .map(|result_vec| {
+                            let mut vector: Vec<Arc<PipelineData>> = Vec::new();
+
+                            match result_vec {
+                                Ok(arced_vec) => {
+                                    for data in arced_vec.iter() {
+                                        vector.push(data.clone());
+                                    }
                                 }
+                                Err(e) => errors.push(e),
                             }
-                            Err(e) => errors.push(e),
-                        }
 
-                        vector
-                    })
-                    .flatten()
-                    .collect::<Vec<_>>();
+                            vector
+                        })
+                        .flatten()
+                        .collect::<Vec<_>>();
 
-                if errors.len() > 0 {
-                    // TODO: Flatten the errors into something useful instead of just returning this
-                    Err(PipelineError::NodeFailed)
-                } else {
-                    Ok(Arc::new(outputs))
+                    if errors.len() > 0 {
+                        // TODO: Flatten the errors into something useful instead of just returning this
+                        Err(PipelineError::NodeFailed)
+                    } else {
+                        Ok(Arc::new(outputs))
+                    }
                 }
             }
-        }
+        }.boxed()
     }
 }
 

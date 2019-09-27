@@ -15,8 +15,7 @@ use divvun_pipeline::{
     module::AllocationType
 };
 
-#[runtime::main]
-async fn main() {
+async fn main_async() {
     env_logger::init();
 
     let pipeline = "pipeline";
@@ -71,4 +70,8 @@ async fn main() {
             }
         }
     }
+}
+
+fn main() {
+    async_std::task::block_on(main_async());
 }
