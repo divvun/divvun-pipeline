@@ -11,8 +11,8 @@ use log::{error, info};
 
 use divvun_pipeline::{
     file::{load_pipeline_file, PIPELINE_EXTENSION},
+    module::AllocationType,
     run::PipelineRunConfigurationBuilder,
-    module::AllocationType
 };
 
 async fn main_async() {

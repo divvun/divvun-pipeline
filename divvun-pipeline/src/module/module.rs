@@ -300,7 +300,7 @@ impl Module {
                     .map(|p| CString::new(&**p).expect("valid parameter"))
                     .collect::<Vec<CString>>()
             })
-            .unwrap_or_else(|| vec![]);;
+            .unwrap_or_else(|| vec![]);
 
         let parameter_ptr: Vec<*const c_char> =
             parameters.iter().map(|p| p.as_ptr()).collect::<Vec<_>>();

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use futures::future::{FutureExt, join_all};
+use futures::future::{join_all, FutureExt};
 use log::info;
 use serde::{Deserialize, Serialize};
 
@@ -64,16 +64,16 @@ impl PipelineNodeSerial {
         &'a self,
         registry: Arc<ModuleRegistry>,
         input: PipelineType,
-    ) -> std::pin::Pin<Box<
-        dyn futures::future::Future<
-            Output = Result<PipelineType, PipelineError>
-        > + 'a + Send
-    >> {
+    ) -> std::pin::Pin<
+        Box<dyn futures::future::Future<Output = Result<PipelineType, PipelineError>> + 'a + Send>,
+    > {
         use futures::future::FutureExt;
 
         async move {
             match self {
-                PipelineNodeSerial::SerialSingle(command) => process_single(registry, command, input),
+                PipelineNodeSerial::SerialSingle(command) => {
+                    process_single(registry, command, input)
+                }
                 PipelineNodeSerial::SerialMultiple(nodes) => {
                     let mut input = input.clone();
 
@@ -84,7 +84,8 @@ impl PipelineNodeSerial {
                     Ok(input)
                 }
             }
-        }.boxed()
+        }
+            .boxed()
     }
 }
 
@@ -93,11 +94,9 @@ impl PipelineNodeParallel {
         &'a self,
         registry: Arc<ModuleRegistry>,
         input: PipelineType,
-    ) -> std::pin::Pin<Box<
-        dyn futures::future::Future<
-            Output = Result<PipelineType, PipelineError>
-        > + 'a + Send
-    >> {
+    ) -> std::pin::Pin<
+        Box<dyn futures::future::Future<Output = Result<PipelineType, PipelineError>> + 'a + Send>,
+    > {
         async move {
             match self {
                 PipelineNodeParallel::ParallelSingle(command) => {
@@ -142,7 +141,8 @@ impl PipelineNodeParallel {
                     }
                 }
             }
-        }.boxed()
+        }
+            .boxed()
     }
 }
 
